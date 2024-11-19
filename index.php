@@ -7,17 +7,9 @@
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
-            // Debug output
-            $debug = [
-                'received_data' => $_POST,
-                'raw_domain' => $_POST['domain'] ?? 'no domain sent'
-            ];
-
-            // Get the domain and clean it
+            // Simply get the domain and trim it
             $domain = trim($_POST['domain'] ?? '');
-            $debug['cleaned_domain'] = $domain;
             
-            // Basic validation
             if (empty($domain)) {
                 throw new Exception('Domain cannot be empty');
             }
@@ -28,8 +20,7 @@
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
-                'data' => $results,
-                'debug' => $debug
+                'data' => $results
             ]);
             
         } catch (Exception $e) {
@@ -37,8 +28,7 @@
             http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'error' => $e->getMessage(),
-                'debug' => $debug ?? []
+                'error' => $e->getMessage()
             ]);
         }
         exit;
@@ -77,11 +67,6 @@
                 
                 <div id="error" class="hidden text-red-500 p-4">
                 </div>
-
-                <div id="debug" class="mt-4 p-4 bg-gray-100 rounded hidden">
-                    <h3 class="font-bold">Debug Information:</h3>
-                    <pre class="whitespace-pre-wrap"></pre>
-                </div>
             </div>
         </div>
 
@@ -92,20 +77,17 @@
             const domain = document.getElementById('domain').value.trim();
             const results = document.getElementById('results');
             const error = document.getElementById('error');
-            const debug = document.getElementById('debug');
             
             if (!domain) {
                 error.textContent = 'Please enter a domain';
                 error.classList.remove('hidden');
                 results.classList.add('hidden');
-                debug.classList.add('hidden');
                 return;
             }
             
             results.innerHTML = '<div class="text-center p-4">Checking...</div>';
             results.classList.remove('hidden');
             error.classList.add('hidden');
-            debug.classList.add('hidden');
             
             try {
                 const response = await fetch('', {
@@ -117,12 +99,6 @@
                 });
                 
                 const data = await response.json();
-                
-                // Show debug information
-                if (data.debug) {
-                    debug.querySelector('pre').textContent = JSON.stringify(data.debug, null, 2);
-                    debug.classList.remove('hidden');
-                }
                 
                 if (!response.ok) {
                     throw new Error(data.error || 'An error occurred');
