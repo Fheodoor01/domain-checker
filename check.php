@@ -5,12 +5,6 @@
         public function __construct($config) {
             $this->config = $config;
         }
-
-        private function getDnsRecord($domain, $type) {
-            $cmd = "dig +short " . escapeshellarg($domain) . " " . $type;
-            exec($cmd, $output, $return_var);
-            return $output;
-        }
         
         public function checkAll($domain) {
             return [
@@ -25,12 +19,12 @@
         
         private function checkSpf($domain) {
             try {
-                $cmd = "dig +short " . escapeshellarg($domain) . " TXT";
-                exec($cmd, $output, $return_var);
-                
-                foreach ($output as $record) {
-                    if (strpos($record, 'v=spf1') === 1) { // Records usually start with a quote
-                        return $this->analyzeSpf(trim($record, '"'));
+                $records = dns_get_record($domain, DNS_TXT);
+                if ($records) {
+                    foreach ($records as $record) {
+                        if (isset($record['txt']) && strpos($record['txt'], 'v=spf1') === 0) {
+                            return $this->analyzeSpf($record['txt']);
+                        }
                     }
                 }
                 return ['status' => 'bad', 'message' => 'No SPF record found'];
@@ -59,17 +53,16 @@
 
         private function checkDmarc($domain) {
             try {
-                $cmd = "dig +short " . escapeshellarg("_dmarc." . $domain) . " TXT";
-                exec($cmd, $output, $return_var);
-                
-                foreach ($output as $record) {
-                    if (strpos($record, 'v=DMARC1') === 1) {
-                        $record = trim($record, '"');
-                        return [
-                            'status' => 'good',
-                            'record' => $record,
-                            'strength' => $this->analyzeDmarcStrength($record)
-                        ];
+                $records = dns_get_record('_dmarc.' . $domain, DNS_TXT);
+                if ($records) {
+                    foreach ($records as $record) {
+                        if (isset($record['txt']) && strpos($record['txt'], 'v=DMARC1') === 0) {
+                            return [
+                                'status' => 'good',
+                                'record' => $record['txt'],
+                                'strength' => $this->analyzeDmarcStrength($record['txt'])
+                            ];
+                        }
                     }
                 }
                 return ['status' => 'bad', 'message' => 'No DMARC record found'];
@@ -91,23 +84,19 @@
             $results = [];
             foreach ($this->config['dns']['dkim_selectors'] as $selector) {
                 try {
-                    $cmd = "dig +short " . escapeshellarg($selector . "._domainkey." . $domain) . " TXT";
-                    exec($cmd, $output, $return_var);
-                    
-                    $found = false;
-                    foreach ($output as $record) {
-                        if (strpos($record, 'v=DKIM1') === 1) {
-                            $results[$selector] = [
-                                'status' => 'good',
-                                'record' => trim($record, '"')
-                            ];
-                            $found = true;
-                            break;
+                    $records = dns_get_record($selector . '._domainkey.' . $domain, DNS_TXT);
+                    if ($records) {
+                        foreach ($records as $record) {
+                            if (isset($record['txt']) && strpos($record['txt'], 'v=DKIM1') === 0) {
+                                $results[$selector] = [
+                                    'status' => 'good',
+                                    'record' => $record['txt']
+                                ];
+                                continue 2;
+                            }
                         }
                     }
-                    if (!$found) {
-                        $results[$selector] = ['status' => 'bad', 'message' => 'No DKIM record found'];
-                    }
+                    $results[$selector] = ['status' => 'bad', 'message' => 'No DKIM record found'];
                 } catch (Exception $e) {
                     $results[$selector] = ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
                 }
@@ -117,15 +106,15 @@
 
         private function checkBimi($domain) {
             try {
-                $cmd = "dig +short " . escapeshellarg("default._bimi." . $domain) . " TXT";
-                exec($cmd, $output, $return_var);
-                
-                foreach ($output as $record) {
-                    if (strpos($record, 'v=BIMI1') === 1) {
-                        return [
-                            'status' => 'good',
-                            'record' => trim($record, '"')
-                        ];
+                $records = dns_get_record('default._bimi.' . $domain, DNS_TXT);
+                if ($records) {
+                    foreach ($records as $record) {
+                        if (isset($record['txt']) && strpos($record['txt'], 'v=BIMI1') === 0) {
+                            return [
+                                'status' => 'good',
+                                'record' => $record['txt']
+                            ];
+                        }
                     }
                 }
                 return ['status' => 'bad', 'message' => 'No BIMI record found'];
@@ -136,26 +125,19 @@
 
         private function checkZoneTransfer($domain) {
             try {
-                $cmd = "dig +short " . escapeshellarg($domain) . " NS";
-                exec($cmd, $output, $return_var);
-                
-                if (empty($output)) {
+                $ns_records = dns_get_record($domain, DNS_NS);
+                if (!$ns_records) {
                     return ['status' => 'error', 'message' => 'No NS records found'];
                 }
-
-                foreach ($output as $ns) {
-                    $cmd = "dig @" . trim($ns, '.') . " " . escapeshellarg($domain) . " AXFR +noall +answer";
-                    exec($cmd, $axfr_output, $return_var);
-                    
-                    if (!empty($axfr_output)) {
-                        return [
-                            'status' => 'bad',
-                            'message' => "Zone transfer possible from " . trim($ns, '.')
-                        ];
-                    }
-                }
                 
-                return ['status' => 'good', 'message' => 'Zone transfer not allowed'];
+                // Since we can't actually test zone transfers without exec(),
+                // we'll just check for NS records existence
+                return [
+                    'status' => 'info',
+                    'message' => 'NS records found: ' . implode(', ', array_map(function($r) { 
+                        return $r['target']; 
+                    }, $ns_records))
+                ];
             } catch (Exception $e) {
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
             }
@@ -163,28 +145,22 @@
 
         private function checkDnssec($domain) {
             try {
-                // Check for DNSKEY records
-                $cmd = "dig +short " . escapeshellarg($domain) . " DNSKEY";
-                exec($cmd, $dnskey_output, $return_var);
+                $dnskey_records = dns_get_record($domain, DNS_DNSKEY);
+                $ds_records = dns_get_record($domain, DNS_DS);
                 
-                // Check for DS records
-                $cmd = "dig +short " . escapeshellarg($domain) . " DS";
-                exec($cmd, $ds_output, $return_var);
-                
-                if (!empty($dnskey_output) || !empty($ds_output)) {
+                if ($dnskey_records || $ds_records) {
                     $details = [];
-                    if (!empty($dnskey_output)) {
-                        $details[] = "DNSKEY records found (" . count($dnskey_output) . ")";
+                    if ($dnskey_records) {
+                        $details[] = "DNSKEY records found (" . count($dnskey_records) . ")";
                     }
-                    if (!empty($ds_output)) {
-                        $details[] = "DS records found (" . count($ds_output) . ")";
+                    if ($ds_records) {
+                        $details[] = "DS records found (" . count($ds_records) . ")";
                     }
                     return [
                         'status' => 'good',
                         'message' => implode(', ', $details)
                     ];
                 }
-                
                 return ['status' => 'bad', 'message' => 'No DNSSEC records found'];
             } catch (Exception $e) {
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
