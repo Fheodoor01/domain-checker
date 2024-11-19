@@ -1,0 +1,14 @@
+{
+        "name": "domain-checker/security",
+        "description": "Production-ready domain security checker",
+        "type": "project",
+        "require": {
+            "php": ">=7.4",
+            "ext-json": "*"
+        },
+        "autoload": {
+            "psr-4": {
+                "DomainChecker\\": "src/"
+            }
+        }
+    }
