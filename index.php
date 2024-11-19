@@ -5,34 +5,24 @@
     require_once 'check.php';
     $config = require 'config.php';
 
+    $results = null;
+    $error = null;
+    $debug = [];
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        header('Content-Type: application/json');
-        
+        $debug['post_data'] = $_POST;
         $domain = $_POST['domain'] ?? '';
         
         if (empty($domain)) {
-            echo json_encode([
-                'success' => false,
-                'error' => 'Please enter a domain'
-            ]);
-            exit;
+            $error = 'Please enter a domain';
+        } else {
+            try {
+                $checker = new DomainChecker($config);
+                $results = $checker->checkAll($domain);
+            } catch (Exception $e) {
+                $error = $e->getMessage();
+            }
         }
-
-        try {
-            $checker = new DomainChecker($config);
-            $results = $checker->checkAll($domain);
-            
-            echo json_encode([
-                'success' => true,
-                'data' => $results
-            ]);
-        } catch (Exception $e) {
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]);
-        }
-        exit;
     }
     ?>
     <!DOCTYPE html>
@@ -48,7 +38,7 @@
             <h1 class="text-3xl font-bold mb-8">Domain Security Checker</h1>
             
             <div class="bg-white rounded-lg shadow p-6">
-                <form id="checkForm" class="mb-6">
+                <form method="post" class="mb-6">
                     <div class="flex gap-4">
                         <input type="text" 
                                id="domain" 
@@ -63,153 +53,92 @@
                     </div>
                 </form>
                 
-                <div id="results" class="hidden space-y-4">
-                </div>
-                
-                <div id="error" class="hidden text-red-500 p-4">
-                </div>
-                
-                <div id="debug" class="mt-4 p-4 bg-gray-100 rounded">
+                <?php if ($error): ?>
+                    <div class="text-red-500 p-4">
+                        <?php echo htmlspecialchars($error); ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($results): ?>
+                    <div class="space-y-4">
+                        <?php foreach ($results as $key => $value): ?>
+                            <div class="border rounded-lg p-4 bg-gray-50">
+                                <h3 class="font-bold text-lg mb-2">
+                                    <?php
+                                    $titles = [
+                                        'spf' => 'SPF (Sender Policy Framework)',
+                                        'dmarc' => 'DMARC (Domain-based Message Authentication)',
+                                        'dkim' => 'DKIM (DomainKeys Identified Mail)',
+                                        'bimi' => 'BIMI (Brand Indicators for Message Identification)',
+                                        'zone_transfer' => 'Zone Transfer',
+                                        'dnssec' => 'DNSSEC'
+                                    ];
+                                    echo htmlspecialchars($titles[$key] ?? $key);
+                                    ?>
+                                </h3>
+                                <div class="space-y-2">
+                                    <p>
+                                        <span class="font-semibold">Status:</span>
+                                        <span class="<?php echo $value['status'] === 'good' ? 'text-green-600' : 'text-red-600'; ?>">
+                                            <?php echo htmlspecialchars(strtoupper($value['status'] ?? 'unknown')); ?>
+                                        </span>
+                                    </p>
+                                    
+                                    <?php if (!empty($value['strength'])): ?>
+                                        <p>
+                                            <span class="font-semibold">Strength:</span>
+                                            <span><?php echo htmlspecialchars(strtoupper($value['strength'])); ?></span>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($value['message'])): ?>
+                                        <p>
+                                            <span class="font-semibold">Message:</span>
+                                            <span><?php echo htmlspecialchars($value['message']); ?></span>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($value['record'])): ?>
+                                        <p class="font-mono text-sm bg-gray-100 p-2 rounded overflow-x-auto">
+                                            <?php echo htmlspecialchars($value['record']); ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if ($key === 'dkim' && is_array($value)): ?>
+                                        <div class="mt-2">
+                                            <?php foreach ($value as $selector => $selectorData): ?>
+                                                <div class="mt-2 p-2 bg-gray-100 rounded">
+                                                    <p class="font-semibold">Selector: <?php echo htmlspecialchars($selector); ?></p>
+                                                    <p>Status: 
+                                                        <span class="<?php echo $selectorData['status'] === 'good' ? 'text-green-600' : 'text-red-600'; ?>">
+                                                            <?php echo htmlspecialchars(strtoupper($selectorData['status'])); ?>
+                                                        </span>
+                                                    </p>
+                                                    <?php if (!empty($selectorData['record'])): ?>
+                                                        <p class="font-mono text-sm mt-1">
+                                                            <?php echo htmlspecialchars($selectorData['record']); ?>
+                                                        </p>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($selectorData['message'])): ?>
+                                                        <p class="mt-1">
+                                                            <?php echo htmlspecialchars($selectorData['message']); ?>
+                                                        </p>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="mt-4 p-4 bg-gray-100 rounded">
                     <h3 class="font-bold">Debug Output:</h3>
-                    <pre id="debugOutput"></pre>
+                    <pre><?php echo htmlspecialchars(print_r($debug, true)); ?></pre>
                 </div>
             </div>
         </div>
-
-        <script>
-        document.getElementById('checkForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const domain = document.getElementById('domain').value.trim();
-            const results = document.getElementById('results');
-            const error = document.getElementById('error');
-            const debugOutput = document.getElementById('debugOutput');
-            
-            if (!domain) {
-                error.textContent = 'Please enter a domain';
-                error.classList.remove('hidden');
-                results.classList.add('hidden');
-                return;
-            }
-            
-            results.innerHTML = '<div class="text-center p-4">Checking...</div>';
-            results.classList.remove('hidden');
-            error.classList.add('hidden');
-            
-            debugOutput.textContent = `Sending request for domain: ${domain}\n`;
-            
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '', true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    debugOutput.textContent += `Response status: ${xhr.status}\n`;
-                    debugOutput.textContent += `Response text: ${xhr.responseText}\n`;
-                    
-                    if (xhr.status === 200) {
-                        try {
-                            const data = JSON.parse(xhr.responseText);
-                            if (data.success) {
-                                results.innerHTML = formatResults(data.data);
-                            } else {
-                                throw new Error(data.error || 'An error occurred');
-                            }
-                        } catch (err) {
-                            error.textContent = err.message || 'An error occurred while checking the domain.';
-                            error.classList.remove('hidden');
-                            results.classList.add('hidden');
-                            debugOutput.textContent += '\nError parsing response: ' + err.message;
-                        }
-                    } else {
-                        error.textContent = 'Server error occurred';
-                        error.classList.remove('hidden');
-                        results.classList.add('hidden');
-                    }
-                }
-            };
-            
-            const formData = `domain=${encodeURIComponent(domain)}`;
-            debugOutput.textContent += `Sending data: ${formData}\n`;
-            xhr.send(formData);
-        });
-
-        function formatResults(data) {
-            const sections = {
-                spf: 'SPF (Sender Policy Framework)',
-                dmarc: 'DMARC (Domain-based Message Authentication)',
-                dkim: 'DKIM (DomainKeys Identified Mail)',
-                bimi: 'BIMI (Brand Indicators for Message Identification)',
-                zone_transfer: 'Zone Transfer',
-                dnssec: 'DNSSEC'
-            };
-
-            return Object.entries(data).map(([key, value]) => {
-                const title = sections[key];
-                const status = value.status || 'unknown';
-                const message = value.message || '';
-                const record = value.record || '';
-                const strength = value.strength || '';
-
-                const statusColor = {
-                    good: 'text-green-600',
-                    bad: 'text-red-600',
-                    error: 'text-yellow-600'
-                }[status];
-
-                let content = `
-                    <div class="border rounded-lg p-4 bg-gray-50">
-                        <h3 class="font-bold text-lg mb-2">${title}</h3>
-                        <div class="space-y-2">
-                            <p>
-                                <span class="font-semibold">Status:</span> 
-                                <span class="${statusColor}">${status.toUpperCase()}</span>
-                            </p>`;
-
-                if (strength) {
-                    content += `
-                        <p>
-                            <span class="font-semibold">Strength:</span> 
-                            <span>${strength.toUpperCase()}</span>
-                        </p>`;
-                }
-
-                if (message) {
-                    content += `
-                        <p>
-                            <span class="font-semibold">Message:</span> 
-                            <span>${message}</span>
-                        </p>`;
-                }
-
-                if (record) {
-                    content += `
-                        <p class="font-mono text-sm bg-gray-100 p-2 rounded overflow-x-auto">
-                            ${record}
-                        </p>`;
-                }
-
-                if (key === 'dkim' && typeof value === 'object') {
-                    content += `<div class="mt-2">`;
-                    for (const [selector, selectorData] of Object.entries(value)) {
-                        content += `
-                            <div class="mt-2 p-2 bg-gray-100 rounded">
-                                <p class="font-semibold">Selector: ${selector}</p>
-                                <p>Status: <span class="${statusColor}">${selectorData.status.toUpperCase()}</span></p>
-                                ${selectorData.record ? `<p class="font-mono text-sm mt-1">${selectorData.record}</p>` : ''}
-                                ${selectorData.message ? `<p class="mt-1">${selectorData.message}</p>` : ''}
-                            </div>`;
-                    }
-                    content += `</div>`;
-                }
-
-                content += `
-                        </div>
-                    </div>`;
-
-                return content;
-            }).join('');
-        }
-        </script>
     </body>
     </html>
