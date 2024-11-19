@@ -7,21 +7,19 @@
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
+            // Debug output
+            $debug = [
+                'received_data' => $_POST,
+                'raw_domain' => $_POST['domain'] ?? 'no domain sent'
+            ];
+
             // Get the domain and clean it
             $domain = trim($_POST['domain'] ?? '');
-            
-            // Remove any protocol and www
-            $domain = preg_replace('#^https?://(www\.)?#', '', $domain);
-            $domain = trim($domain, '/');
+            $debug['cleaned_domain'] = $domain;
             
             // Basic validation
             if (empty($domain)) {
                 throw new Exception('Domain cannot be empty');
-            }
-            
-            // Check if domain has at least one dot and only valid characters
-            if (!preg_match('/^[a-z0-9-]+\.[a-z0-9-\.]+$/i', $domain)) {
-                throw new Exception('Invalid domain format');
             }
 
             $checker = new DomainChecker($config);
@@ -30,7 +28,8 @@
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
-                'data' => $results
+                'data' => $results,
+                'debug' => $debug
             ]);
             
         } catch (Exception $e) {
@@ -38,7 +37,8 @@
             http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'debug' => $debug ?? []
             ]);
         }
         exit;
@@ -63,7 +63,7 @@
                                id="domain" 
                                name="domain" 
                                class="flex-1 p-2 border rounded" 
-                               placeholder="Enter domain (e.g., example.com)" 
+                               placeholder="Enter domain (e.g., google.com)" 
                                required>
                         <button type="submit" 
                                 class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
@@ -77,6 +77,11 @@
                 
                 <div id="error" class="hidden text-red-500 p-4">
                 </div>
+
+                <div id="debug" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <h3 class="font-bold">Debug Information:</h3>
+                    <pre class="whitespace-pre-wrap"></pre>
+                </div>
             </div>
         </div>
 
@@ -87,17 +92,20 @@
             const domain = document.getElementById('domain').value.trim();
             const results = document.getElementById('results');
             const error = document.getElementById('error');
+            const debug = document.getElementById('debug');
             
             if (!domain) {
                 error.textContent = 'Please enter a domain';
                 error.classList.remove('hidden');
                 results.classList.add('hidden');
+                debug.classList.add('hidden');
                 return;
             }
             
             results.innerHTML = '<div class="text-center p-4">Checking...</div>';
             results.classList.remove('hidden');
             error.classList.add('hidden');
+            debug.classList.add('hidden');
             
             try {
                 const response = await fetch('', {
@@ -109,6 +117,12 @@
                 });
                 
                 const data = await response.json();
+                
+                // Show debug information
+                if (data.debug) {
+                    debug.querySelector('pre').textContent = JSON.stringify(data.debug, null, 2);
+                    debug.classList.remove('hidden');
+                }
                 
                 if (!response.ok) {
                     throw new Error(data.error || 'An error occurred');
@@ -181,7 +195,6 @@
                         </p>`;
                 }
 
-                // Handle DKIM special case (multiple selectors)
                 if (key === 'dkim' && typeof value === 'object') {
                     content += `<div class="mt-2">`;
                     for (const [selector, selectorData] of Object.entries(value)) {
