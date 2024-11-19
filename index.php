@@ -7,24 +7,20 @@
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
+            // Get the domain and clean it
             $domain = trim($_POST['domain'] ?? '');
             
-            // Remove any protocol prefixes and trailing slashes
-            $domain = preg_replace(['#^https?://#', '#/.*$#'], '', $domain);
-            $domain = trim($domain);
+            // Remove any protocol and www
+            $domain = preg_replace('#^https?://(www\.)?#', '', $domain);
+            $domain = trim($domain, '/');
             
-            // Validate domain
+            // Basic validation
             if (empty($domain)) {
                 throw new Exception('Domain cannot be empty');
             }
-
-            // Convert IDN domains to ASCII if needed
-            if (function_exists('idn_to_ascii')) {
-                $domain = idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain;
-            }
-
-            // Simple domain validation
-            if (!filter_var('http://' . $domain, FILTER_VALIDATE_URL)) {
+            
+            // Check if domain has at least one dot and only valid characters
+            if (!preg_match('/^[a-z0-9-]+\.[a-z0-9-\.]+$/i', $domain)) {
                 throw new Exception('Invalid domain format');
             }
 
