@@ -4,9 +4,18 @@
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
-            $domain = filter_input(INPUT_POST, 'domain', FILTER_SANITIZE_STRING);
+            $domain = filter_var($_POST['domain'], FILTER_SANITIZE_URL);
             if (!$domain) {
                 throw new Exception('Invalid domain');
+            }
+            
+            // Remove any protocol prefixes and trailing slashes
+            $domain = preg_replace('#^https?://#', '', $domain);
+            $domain = trim($domain, '/');
+            
+            // Basic domain validation
+            if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-_.]+\.[a-zA-Z]{2,}$/', $domain)) {
+                throw new Exception('Invalid domain format');
             }
             
             $checker = new DomainChecker($config);
@@ -20,6 +29,7 @@
             
         } catch (Exception $e) {
             header('Content-Type: application/json');
+            http_response_code(400);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
@@ -87,15 +97,17 @@
                 
                 const data = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error(data.error || 'An error occurred');
+                }
+                
                 if (data.success) {
                     results.innerHTML = formatResults(data.data);
                 } else {
-                    error.textContent = data.error;
-                    error.classList.remove('hidden');
-                    results.classList.add('hidden');
+                    throw new Error(data.error || 'An error occurred');
                 }
             } catch (err) {
-                error.textContent = 'An error occurred while checking the domain.';
+                error.textContent = err.message || 'An error occurred while checking the domain.';
                 error.classList.remove('hidden');
                 results.classList.add('hidden');
             }
@@ -124,34 +136,58 @@
                     error: 'text-yellow-600'
                 }[status];
 
-                return `
+                let content = `
                     <div class="border rounded-lg p-4 bg-gray-50">
                         <h3 class="font-bold text-lg mb-2">${title}</h3>
                         <div class="space-y-2">
                             <p>
                                 <span class="font-semibold">Status:</span> 
                                 <span class="${statusColor}">${status.toUpperCase()}</span>
-                            </p>
-                            ${strength ? `
-                                <p>
-                                    <span class="font-semibold">Strength:</span> 
-                                    <span>${strength.toUpperCase()}</span>
-                                </p>
-                            ` : ''}
-                            ${message ? `
-                                <p>
-                                    <span class="font-semibold">Message:</span> 
-                                    <span>${message}</span>
-                                </p>
-                            ` : ''}
-                            ${record ? `
-                                <p class="font-mono text-sm bg-gray-100 p-2 rounded">
-                                    ${record}
-                                </p>
-                            ` : ''}
+                            </p>`;
+
+                if (strength) {
+                    content += `
+                        <p>
+                            <span class="font-semibold">Strength:</span> 
+                            <span>${strength.toUpperCase()}</span>
+                        </p>`;
+                }
+
+                if (message) {
+                    content += `
+                        <p>
+                            <span class="font-semibold">Message:</span> 
+                            <span>${message}</span>
+                        </p>`;
+                }
+
+                if (record) {
+                    content += `
+                        <p class="font-mono text-sm bg-gray-100 p-2 rounded overflow-x-auto">
+                            ${record}
+                        </p>`;
+                }
+
+                // Handle DKIM special case (multiple selectors)
+                if (key === 'dkim' && typeof value === 'object') {
+                    content += `<div class="mt-2">`;
+                    for (const [selector, selectorData] of Object.entries(value)) {
+                        content += `
+                            <div class="mt-2 p-2 bg-gray-100 rounded">
+                                <p class="font-semibold">Selector: ${selector}</p>
+                                <p>Status: <span class="${statusColor}">${selectorData.status.toUpperCase()}</span></p>
+                                ${selectorData.record ? `<p class="font-mono text-sm mt-1">${selectorData.record}</p>` : ''}
+                                ${selectorData.message ? `<p class="mt-1">${selectorData.message}</p>` : ''}
+                            </div>`;
+                    }
+                    content += `</div>`;
+                }
+
+                content += `
                         </div>
-                    </div>
-                `;
+                    </div>`;
+
+                return content;
             }).join('');
         }
         </script>
