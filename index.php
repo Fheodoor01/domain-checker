@@ -1,23 +1,33 @@
 <?php
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+
     require_once 'check.php';
     $config = require 'config.php';
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
-            $domain = filter_var($_POST['domain'], FILTER_SANITIZE_URL);
-            if (!$domain) {
-                throw new Exception('Invalid domain');
-            }
+            $domain = trim($_POST['domain'] ?? '');
             
             // Remove any protocol prefixes and trailing slashes
-            $domain = preg_replace('#^https?://#', '', $domain);
-            $domain = trim($domain, '/');
+            $domain = preg_replace(['#^https?://#', '#/.*$#'], '', $domain);
+            $domain = trim($domain);
             
-            // Basic domain validation
-            if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-_.]+\.[a-zA-Z]{2,}$/', $domain)) {
+            // Validate domain
+            if (empty($domain)) {
+                throw new Exception('Domain cannot be empty');
+            }
+
+            // Convert IDN domains to ASCII if needed
+            if (function_exists('idn_to_ascii')) {
+                $domain = idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain;
+            }
+
+            // Simple domain validation
+            if (!filter_var('http://' . $domain, FILTER_VALIDATE_URL)) {
                 throw new Exception('Invalid domain format');
             }
-            
+
             $checker = new DomainChecker($config);
             $results = $checker->checkAll($domain);
             
@@ -78,9 +88,16 @@
         document.getElementById('checkForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const domain = document.getElementById('domain').value;
+            const domain = document.getElementById('domain').value.trim();
             const results = document.getElementById('results');
             const error = document.getElementById('error');
+            
+            if (!domain) {
+                error.textContent = 'Please enter a domain';
+                error.classList.remove('hidden');
+                results.classList.add('hidden');
+                return;
+            }
             
             results.innerHTML = '<div class="text-center p-4">Checking...</div>';
             results.classList.remove('hidden');
