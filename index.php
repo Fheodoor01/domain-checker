@@ -5,31 +5,31 @@
     require_once 'check.php';
     $config = require 'config.php';
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Get the raw input and content type
-        $rawInput = file_get_contents('php://input');
-        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    // Add nonce for security (similar to WordPress)
+    session_start();
+    if (empty($_SESSION['nonce'])) {
+        $_SESSION['nonce'] = bin2hex(random_bytes(32));
+    }
 
-        // Determine the domain based on input format
-        $domain = '';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json');
         
-        if (strpos($contentType, 'application/json') !== false) {
-            $data = json_decode($rawInput, true);
-            $domain = $data['domain'] ?? '';
-        } else {
-            parse_str($rawInput, $data);
-            $domain = $data['domain'] ?? '';
-        }
-        
-        // Trim and validate domain
-        $domain = trim($domain);
-        
-        if (empty($domain)) {
-            header('Content-Type: application/json');
-            http_response_code(400);
+        // Verify nonce
+        if (!isset($_POST['nonce']) || $_POST['nonce'] !== $_SESSION['nonce']) {
             echo json_encode([
                 'success' => false,
-                'error' => 'Domain is empty'
+                'error' => 'Invalid security token'
+            ]);
+            exit;
+        }
+
+        // Get domain from POST data
+        $domain = isset($_POST['domain']) ? trim($_POST['domain']) : '';
+        
+        if (empty($domain)) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Please enter a domain'
             ]);
             exit;
         }
@@ -38,14 +38,11 @@
             $checker = new DomainChecker($config);
             $results = $checker->checkAll($domain);
             
-            header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
                 'data' => $results
             ]);
         } catch (Exception $e) {
-            header('Content-Type: application/json');
-            http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
@@ -67,7 +64,8 @@
             <h1 class="text-3xl font-bold mb-8">Domain Security Checker</h1>
             
             <div class="bg-white rounded-lg shadow p-6">
-                <form id="checkForm" class="mb-6">
+                <form id="checkForm" class="mb-6" method="post">
+                    <input type="hidden" name="nonce" value="<?php echo $_SESSION['nonce']; ?>">
                     <div class="flex gap-4">
                         <input type="text" 
                                id="domain" 
@@ -99,10 +97,13 @@
         document.getElementById('checkForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const domain = document.getElementById('domain').value.trim();
+            const form = e.target;
+            const formData = new FormData(form);
             const results = document.getElementById('results');
             const error = document.getElementById('error');
             const debugOutput = document.getElementById('debugOutput');
+            
+            const domain = formData.get('domain').trim();
             
             if (!domain) {
                 error.textContent = 'Please enter a domain';
@@ -118,12 +119,9 @@
             try {
                 debugOutput.textContent = `Sending request for domain: ${domain}\n`;
                 
-                const response = await fetch(window.location.href, {
+                const response = await fetch('', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ domain })
+                    body: formData
                 });
                 
                 debugOutput.textContent += 'Response received\n';
