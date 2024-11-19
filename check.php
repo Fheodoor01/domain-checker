@@ -130,8 +130,6 @@
                     return ['status' => 'error', 'message' => 'No NS records found'];
                 }
                 
-                // Since we can't actually test zone transfers without exec(),
-                // we'll just check for NS records existence
                 return [
                     'status' => 'info',
                     'message' => 'NS records found: ' . implode(', ', array_map(function($r) { 
@@ -145,22 +143,25 @@
 
         private function checkDnssec($domain) {
             try {
-                $dnskey_records = dns_get_record($domain, DNS_DNSKEY);
-                $ds_records = dns_get_record($domain, DNS_DS);
+                // Try to get SOA record with DNSSEC information
+                $records = dns_get_record($domain, DNS_ANY);
+                $hasDnssec = false;
+                $details = [];
                 
-                if ($dnskey_records || $ds_records) {
-                    $details = [];
-                    if ($dnskey_records) {
-                        $details[] = "DNSKEY records found (" . count($dnskey_records) . ")";
+                foreach ($records as $record) {
+                    if ($record['type'] === 'RRSIG' || $record['type'] === 'DNSKEY') {
+                        $hasDnssec = true;
+                        $details[] = "Found {$record['type']} record";
                     }
-                    if ($ds_records) {
-                        $details[] = "DS records found (" . count($ds_records) . ")";
-                    }
+                }
+                
+                if ($hasDnssec) {
                     return [
                         'status' => 'good',
                         'message' => implode(', ', $details)
                     ];
                 }
+                
                 return ['status' => 'bad', 'message' => 'No DNSSEC records found'];
             } catch (Exception $e) {
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
