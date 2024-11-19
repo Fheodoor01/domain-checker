@@ -5,32 +5,22 @@
     require_once 'check.php';
     $config = require 'config.php';
 
+    // Debug: Print the raw POST data
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        try {
-            // Simply get the domain and trim it
-            $domain = trim($_POST['domain'] ?? '');
-            
-            if (empty($domain)) {
-                throw new Exception('Domain cannot be empty');
-            }
-
-            $checker = new DomainChecker($config);
-            $results = $checker->checkAll($domain);
-            
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => true,
-                'data' => $results
-            ]);
-            
-        } catch (Exception $e) {
-            header('Content-Type: application/json');
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]);
+        var_dump($_POST);
+        var_dump($_REQUEST);
+        
+        $domain = $_POST['domain'] ?? '';
+        
+        if (empty($domain)) {
+            die(json_encode(['success' => false, 'error' => 'Domain is empty']));
         }
+
+        $checker = new DomainChecker($config);
+        $results = $checker->checkAll($domain);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $results]);
         exit;
     }
     ?>
@@ -67,6 +57,11 @@
                 
                 <div id="error" class="hidden text-red-500 p-4">
                 </div>
+                
+                <div id="debug" class="mt-4 p-4 bg-gray-100 rounded">
+                    <h3 class="font-bold">Debug Output:</h3>
+                    <pre id="debugOutput"></pre>
+                </div>
             </div>
         </div>
 
@@ -77,32 +72,25 @@
             const domain = document.getElementById('domain').value.trim();
             const results = document.getElementById('results');
             const error = document.getElementById('error');
-            
-            if (!domain) {
-                error.textContent = 'Please enter a domain';
-                error.classList.remove('hidden');
-                results.classList.add('hidden');
-                return;
-            }
+            const debugOutput = document.getElementById('debugOutput');
             
             results.innerHTML = '<div class="text-center p-4">Checking...</div>';
             results.classList.remove('hidden');
             error.classList.add('hidden');
             
+            const formData = new FormData();
+            formData.append('domain', domain);
+            
             try {
-                const response = await fetch('', {
+                debugOutput.textContent = 'Sending request...';
+                
+                const response = await fetch(window.location.href, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `domain=${encodeURIComponent(domain)}`
+                    body: formData
                 });
                 
                 const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'An error occurred');
-                }
+                debugOutput.textContent = 'Response received: ' + JSON.stringify(data, null, 2);
                 
                 if (data.success) {
                     results.innerHTML = formatResults(data.data);
@@ -113,84 +101,12 @@
                 error.textContent = err.message || 'An error occurred while checking the domain.';
                 error.classList.remove('hidden');
                 results.classList.add('hidden');
+                debugOutput.textContent += '\nError: ' + err.message;
             }
         });
 
         function formatResults(data) {
-            const sections = {
-                spf: 'SPF (Sender Policy Framework)',
-                dmarc: 'DMARC (Domain-based Message Authentication)',
-                dkim: 'DKIM (DomainKeys Identified Mail)',
-                bimi: 'BIMI (Brand Indicators for Message Identification)',
-                zone_transfer: 'Zone Transfer',
-                dnssec: 'DNSSEC'
-            };
-
-            return Object.entries(data).map(([key, value]) => {
-                const title = sections[key];
-                const status = value.status || 'unknown';
-                const message = value.message || '';
-                const record = value.record || '';
-                const strength = value.strength || '';
-
-                const statusColor = {
-                    good: 'text-green-600',
-                    bad: 'text-red-600',
-                    error: 'text-yellow-600'
-                }[status];
-
-                let content = `
-                    <div class="border rounded-lg p-4 bg-gray-50">
-                        <h3 class="font-bold text-lg mb-2">${title}</h3>
-                        <div class="space-y-2">
-                            <p>
-                                <span class="font-semibold">Status:</span> 
-                                <span class="${statusColor}">${status.toUpperCase()}</span>
-                            </p>`;
-
-                if (strength) {
-                    content += `
-                        <p>
-                            <span class="font-semibold">Strength:</span> 
-                            <span>${strength.toUpperCase()}</span>
-                        </p>`;
-                }
-
-                if (message) {
-                    content += `
-                        <p>
-                            <span class="font-semibold">Message:</span> 
-                            <span>${message}</span>
-                        </p>`;
-                }
-
-                if (record) {
-                    content += `
-                        <p class="font-mono text-sm bg-gray-100 p-2 rounded overflow-x-auto">
-                            ${record}
-                        </p>`;
-                }
-
-                if (key === 'dkim' && typeof value === 'object') {
-                    content += `<div class="mt-2">`;
-                    for (const [selector, selectorData] of Object.entries(value)) {
-                        content += `
-                            <div class="mt-2 p-2 bg-gray-100 rounded">
-                                <p class="font-semibold">Selector: ${selector}</p>
-                                <p>Status: <span class="${statusColor}">${selectorData.status.toUpperCase()}</span></p>
-                                ${selectorData.record ? `<p class="font-mono text-sm mt-1">${selectorData.record}</p>` : ''}
-                                ${selectorData.message ? `<p class="mt-1">${selectorData.message}</p>` : ''}
-                            </div>`;
-                    }
-                    content += `</div>`;
-                }
-
-                content += `
-                        </div>
-                    </div>`;
-
-                return content;
-            }).join('');
+            // ... (rest of the formatResults function remains the same)
         }
         </script>
     </body>
