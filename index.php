@@ -43,7 +43,16 @@
     }
 
     function getStatusText($status, $lang) {
-        return $lang['status'][strtolower($status)] ?? $lang['status']['unknown'];
+        switch (strtolower($status)) {
+            case 'good':
+                return $lang['status']['passed'];
+            case 'bad':
+                return $lang['status']['failed'];
+            case 'warning':
+                return $lang['status']['warning'];
+            default:
+                return $lang['status']['unknown'];
+        }
     }
 
     function generateSummary($results, $lang) {
@@ -65,23 +74,25 @@
 
                 case 'bad':
                     $message = $lang['messages']['implement_' . $key] ?? ucfirst($key) . ' ' . $lang['status']['failed'];
-                    $improvements[] = $message;
-                    
-                    if (isset($lang['risks'][$key])) {
-                        $risks[] = $lang['risks'][$key];
-                    }
+                    $improvements[] = [
+                        'message' => $message,
+                        'key' => $key
+                    ];
                     break;
 
                 case 'warning':
-                    $improvements[] = $lang['messages']['improve_' . $key] ?? $lang['messages']['generic_improve'];
+                    $message = $lang['messages']['improve_' . $key] ?? $lang['messages']['generic_improve'];
+                    $improvements[] = [
+                        'message' => $message,
+                        'key' => $key
+                    ];
                     break;
             }
         }
 
         return [
             'strengths' => $strengths,
-            'improvements' => $improvements,
-            'risks' => $risks
+            'improvements' => $improvements
         ];
     }
     ?>
@@ -160,18 +171,14 @@
                                     <h3 class="text-yellow-600 font-bold mb-2"><?php echo $lang['improvements']; ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
                                         <?php foreach ($summary['improvements'] as $improvement): ?>
-                                            <li><?php echo htmlspecialchars($improvement); ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                </div>
-                            <?php endif; ?>
-
-                            <?php if (!empty($summary['risks'])): ?>
-                                <div>
-                                    <h3 class="text-red-600 font-bold mb-2"><?php echo $lang['risks']; ?>:</h3>
-                                    <ul class="list-disc list-inside text-sm">
-                                        <?php foreach ($summary['risks'] as $risk): ?>
-                                            <li><?php echo htmlspecialchars($risk); ?></li>
+                                            <li class="mb-2">
+                                                <?php echo htmlspecialchars($improvement['message']); ?>
+                                                <?php if (isset($lang['risks'][$improvement['key']])): ?>
+                                                    <div class="text-red-600 text-xs ml-5 mt-1">
+                                                        <?php echo htmlspecialchars($lang['risks'][$improvement['key']]); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>

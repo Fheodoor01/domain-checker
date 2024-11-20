@@ -1,7 +1,7 @@
 <?php
     return [
         'en' => [
-            'title' => 'Domain Test',
+            'title' => 'Immutec Domain Test',
             'enter_domain' => 'Enter domain (e.g., google.com)',
             'check_button' => 'Check',
             'overall_score' => 'Overall Score',
@@ -54,14 +54,16 @@
                 'implement_bimi' => 'Consider implementing BIMI to display your logo in emails'
             ],
             'risks' => [
-                'email_spoofing' => 'Emails could be spoofed from your domain',
-                'no_auth_policy' => 'No policy for handling failed email authentication',
-                'dns_spoofing' => 'Vulnerable to DNS spoofing attacks',
-                'unencrypted_email' => 'Emails might be transmitted without encryption'
+                'spf' => 'Emails could be spoofed from your domain',
+                'dmarc' => 'No policy for handling failed email authentication',
+                'dnssec' => 'Vulnerable to DNS spoofing attacks',
+                'tls' => 'Emails might be transmitted without encryption',
+                'mta_sts' => 'Email routing security could be compromised',
+                'dane' => 'TLS connections cannot be cryptographically verified'
             ]
         ],
         'nl' => [
-            'title' => 'Domein Test',
+            'title' => 'Immutec Domain Test',
             'enter_domain' => 'Voer domein in (bijv. google.com)',
             'check_button' => 'Controleer',
             'overall_score' => 'Totaalscore',
@@ -114,10 +116,12 @@
                 'implement_bimi' => 'Overweeg BIMI te implementeren om uw logo in e-mails weer te geven'
             ],
             'risks' => [
-                'email_spoofing' => 'E-mails kunnen worden vervalst vanaf uw domein',
-                'no_auth_policy' => 'Geen beleid voor het afhandelen van mislukte e-mailverificatie',
-                'dns_spoofing' => 'Kwetsbaar voor DNS-spoofing aanvallen',
-                'unencrypted_email' => 'E-mails kunnen zonder encryptie worden verzonden'
+                'spf' => 'E-mails kunnen worden vervalst vanaf uw domein',
+                'dmarc' => 'Geen beleid voor het afhandelen van mislukte e-mailverificatie',
+                'dnssec' => 'Kwetsbaar voor DNS-spoofing aanvallen',
+                'tls' => 'E-mails kunnen zonder encryptie worden verzonden',
+                'mta_sts' => 'E-mailrouting beveiliging kan worden gecompromitteerd',
+                'dane' => 'TLS-verbindingen kunnen niet cryptografisch worden geverifieerd'
             ]
         ]
     ];
