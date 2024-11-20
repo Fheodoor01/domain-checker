@@ -58,7 +58,6 @@
     function generateSummary($results, $lang) {
         $strengths = [];
         $improvements = [];
-        $risks = [];
 
         foreach ($results as $key => $result) {
             if ($key === 'overall_score') continue;
@@ -171,15 +170,29 @@
                                     <h3 class="text-yellow-600 font-bold mb-2"><?php echo $lang['improvements']; ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
                                         <?php foreach ($summary['improvements'] as $improvement): ?>
-                                            <li class="mb-2">
-                                                <?php echo htmlspecialchars($improvement['message']); ?>
-                                                <?php if (isset($lang['risks'][$improvement['key']])): ?>
-                                                    <div class="text-red-600 text-xs ml-5 mt-1">
-                                                        <?php echo htmlspecialchars($lang['risks'][$improvement['key']]); ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </li>
+                                            <li><?php echo htmlspecialchars($improvement['message']); ?></li>
                                         <?php endforeach; ?>
+                                    </ul>
+                                </div>
+
+                                <!-- Separate Security Risks Section -->
+                                <div>
+                                    <h3 class="text-red-600 font-bold mb-2"><?php echo $lang['risks']; ?>:</h3>
+                                    <ul class="list-disc list-inside text-sm">
+                                        <?php 
+                                        $shown_risks = [];
+                                        foreach ($summary['improvements'] as $improvement):
+                                            if (isset($lang['risks'][$improvement['key']]) && 
+                                                !in_array($lang['risks'][$improvement['key']], $shown_risks)):
+                                                $shown_risks[] = $lang['risks'][$improvement['key']];
+                                        ?>
+                                            <li class="text-red-600">
+                                                <?php echo htmlspecialchars($lang['risks'][$improvement['key']]); ?>
+                                            </li>
+                                        <?php 
+                                            endif;
+                                        endforeach; 
+                                        ?>
                                     </ul>
                                 </div>
                             <?php endif; ?>
