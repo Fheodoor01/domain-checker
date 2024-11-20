@@ -43,8 +43,7 @@
     }
 
     function getStatusText($status, $lang) {
-        $status = strtolower($status);
-        return $lang['status'][$status] ?? $lang['status']['unknown'];
+        return $lang['status'][strtolower($status)] ?? $lang['status']['unknown'];
     }
 
     function generateSummary($results, $lang) {
@@ -96,15 +95,12 @@
     </head>
     <body class="bg-gray-100">
         <div class="container mx-auto px-4 py-8">
-            <!-- Language Selector and Creator Info -->
-            <div class="flex justify-between items-center mb-6">
-                <div class="text-sm text-gray-600">
-                    <?php echo $lang['created_by']; ?>
-                </div>
+            <!-- Language Selector -->
+            <div class="flex justify-end mb-6">
                 <div class="flex gap-2">
-                    <a href="?lang=en" class="<?php echo $currentLang === 'en' ? 'font-bold' : ''; ?>">EN</a>
+                    <a href="?lang=en" class="<?php echo $currentLang === 'en' ? 'font-bold underline' : ''; ?>">EN</a>
                     <span>|</span>
-                    <a href="?lang=nl" class="<?php echo $currentLang === 'nl' ? 'font-bold' : ''; ?>">NL</a>
+                    <a href="?lang=nl" class="<?php echo $currentLang === 'nl' ? 'font-bold underline' : ''; ?>">NL</a>
                 </div>
             </div>
 
@@ -243,11 +239,6 @@
                         ?>
                     </div>
                 <?php endif; ?>
-            </div>
-
-            <!-- Footer with creator info -->
-            <div class="text-center mt-8 text-gray-600 text-sm">
-                <?php echo $lang['created_by']; ?>
             </div>
         </div>
     </body>

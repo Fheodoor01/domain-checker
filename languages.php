@@ -2,7 +2,6 @@
     return [
         'en' => [
             'title' => 'Domain Test',
-            'created_by' => 'Created by P.Verleye / Immutec',
             'enter_domain' => 'Enter domain (e.g., google.com)',
             'check_button' => 'Check',
             'overall_score' => 'Overall Score',
@@ -63,7 +62,6 @@
         ],
         'nl' => [
             'title' => 'Domein Test',
-            'created_by' => 'Gemaakt door P.Verleye / Immutec',
             'enter_domain' => 'Voer domein in (bijv. google.com)',
             'check_button' => 'Controleer',
             'overall_score' => 'Totaalscore',
