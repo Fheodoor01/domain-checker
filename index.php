@@ -60,7 +60,7 @@
         $improvements = [];
 
         foreach ($results as $key => $result) {
-            if ($key === 'overall_score') continue;
+            if ($key === 'overall_score' || $key === 'debug') continue;
 
             switch ($result['status']) {
                 case 'good':
@@ -108,6 +108,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title><?php echo $lang['title']; ?></title>
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        <style>
+            .debug-section pre {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+        </style>
     </head>
     <body class="bg-gray-100">
         <div class="container mx-auto px-4 py-8">
@@ -264,6 +270,24 @@
                         endforeach; 
                         ?>
                     </div>
+
+                    <!-- Debug Information -->
+                    <?php if (isset($results['debug']) && !empty($results['debug'])): ?>
+                        <div class="mt-8 p-4 bg-gray-50 rounded-lg debug-section">
+                            <h2 class="text-xl font-bold mb-4">Debug Information</h2>
+                            <?php foreach ($results['debug'] as $debug): ?>
+                                <div class="mb-4 p-2 bg-gray-100 rounded">
+                                    <p class="font-bold"><?php echo htmlspecialchars($debug['check']); ?> - <?php echo htmlspecialchars($debug['time']); ?></p>
+                                    <p class="text-sm"><?php echo htmlspecialchars($debug['message']); ?></p>
+                                    <?php if (isset($debug['data']) && !empty($debug['data'])): ?>
+                                        <pre class="text-xs mt-2 bg-gray-200 p-2 rounded">
+                                            <?php echo htmlspecialchars(print_r($debug['data'], true)); ?>
+                                        </pre>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
