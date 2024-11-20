@@ -14,7 +14,8 @@
             'dane' => 'DANE allows you to bind X.509 certificates to DNS names using DNSSEC.',
             'tls' => 'TLS encryption secures email transmission between mail servers.',
             'tls_report' => 'TLS reporting provides feedback about TLS connection successes and failures.',
-            'mta_sts' => 'MTA-STS is a mechanism enabling mail service providers to declare their ability to receive TLS-secured connections.'
+            'mta_sts' => 'MTA-STS is a mechanism enabling mail service providers to declare their ability to receive TLS-secured connections.',
+            'bimi' => 'Brand Indicators for Message Identification (BIMI) allows you to display your logo next to authenticated emails.'
         ]
     ];
     ?>

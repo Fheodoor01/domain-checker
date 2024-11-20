@@ -1,242 +1,107 @@
 <?php
-    class DomainChecker {
-        private $config;
-        
-        public function __construct($config) {
-            $this->config = $config;
-        }
-        
-        public function checkAll($domain) {
-            $results = [
-                'nameservers' => $this->checkNameServers($domain),
-                'smtp' => $this->checkSMTP($domain),
-                'dnssec' => $this->checkDNSSEC($domain),
-                'spf' => $this->checkSPF($domain),
-                'dmarc' => $this->checkDMARC($domain),
-                'dane' => $this->checkDANE($domain),
-                'tls' => $this->checkTLS($domain),
-                'tls_report' => $this->checkTLSReport($domain),
-                'mta_sts' => $this->checkMTASTS($domain)
+    // Add this method to the DomainChecker class
+    private function checkBIMI($domain) {
+        try {
+            // First check if DMARC is properly configured (required for BIMI)
+            $dmarcResult = $this->checkDMARC($domain);
+            if ($dmarcResult['status'] !== 'good' || 
+                (!isset($dmarcResult['strength']) || $dmarcResult['strength'] !== 'strong')) {
+                return [
+                    'status' => 'bad',
+                    'message' => 'BIMI requires strict DMARC policy (p=reject)',
+                    'details' => 'Configure DMARC with p=reject before implementing BIMI'
+                ];
+            }
+
+            // Check default BIMI record
+            $records = dns_get_record('default._bimi.' . $domain, DNS_TXT);
+            if (!empty($records)) {
+                foreach ($records as $record) {
+                    if (isset($record['txt']) && strpos($record['txt'], 'v=BIMI1') === 0) {
+                        // Parse BIMI record to check for required fields
+                        $hasSVG = strpos($record['txt'], 'l=') !== false;
+                        $hasVMC = strpos($record['txt'], 'a=') !== false;
+                        
+                        $status = $hasVMC ? 'good' : 'warning';
+                        $message = $hasVMC ? 
+                            'BIMI record found with VMC certificate' : 
+                            'BIMI record found but missing VMC certificate';
+                        
+                        $details = [];
+                        if ($hasSVG) $details[] = 'SVG logo URL present';
+                        if ($hasVMC) $details[] = 'VMC certificate present';
+                        
+                        return [
+                            'status' => $status,
+                            'message' => $message,
+                            'record' => $record['txt'],
+                            'details' => implode(', ', $details)
+                        ];
+                    }
+                }
+            }
+            
+            return [
+                'status' => 'bad',
+                'message' => 'No BIMI record found',
+                'details' => 'Add a BIMI record to display your logo in supporting email clients'
             ];
-
-            // Calculate overall score
-            $score = $this->calculateScore($results);
-            $results['overall_score'] = $score;
-
-            return $results;
+        } catch (Exception $e) {
+            return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
         }
+    }
 
-        private function calculateScore($results) {
-            $weights = [
-                'nameservers' => 0.5,
-                'smtp' => 0.5,
-                'dnssec' => 0.5,
-                'spf' => 0.75,
-                'dmarc' => 0.75,
-                'dane' => 0.25,
-                'tls' => 0.5,
-                'tls_report' => 0.25,
-                'mta_sts' => 0.25
-            ];
+    // Update the checkAll method to include BIMI
+    public function checkAll($domain) {
+        $results = [
+            'nameservers' => $this->checkNameServers($domain),
+            'smtp' => $this->checkSMTP($domain),
+            'dnssec' => $this->checkDNSSEC($domain),
+            'spf' => $this->checkSPF($domain),
+            'dmarc' => $this->checkDMARC($domain),
+            'dane' => $this->checkDANE($domain),
+            'tls' => $this->checkTLS($domain),
+            'tls_report' => $this->checkTLSReport($domain),
+            'mta_sts' => $this->checkMTASTS($domain),
+            'bimi' => $this->checkBIMI($domain)  // Add BIMI check
+        ];
 
-            $score = 0;
-            $totalWeight = 0;
+        // Update weights in calculateScore method
+        $score = $this->calculateScore($results);
+        $results['overall_score'] = $score;
 
-            foreach ($weights as $check => $weight) {
-                if (isset($results[$check]['status'])) {
-                    $totalWeight += $weight;
-                    if ($results[$check]['status'] === 'good') {
-                        $score += $weight;
-                    }
+        return $results;
+    }
+
+    // Update the calculateScore method to include BIMI
+    private function calculateScore($results) {
+        $weights = [
+            'nameservers' => 0.5,
+            'smtp' => 0.5,
+            'dnssec' => 0.5,
+            'spf' => 0.75,
+            'dmarc' => 0.75,
+            'dane' => 0.25,
+            'tls' => 0.5,
+            'tls_report' => 0.25,
+            'mta_sts' => 0.25,
+            'bimi' => 0.25  // Add BIMI weight
+        ];
+
+        $score = 0;
+        $totalWeight = 0;
+
+        foreach ($weights as $check => $weight) {
+            if (isset($results[$check]['status'])) {
+                $totalWeight += $weight;
+                if ($results[$check]['status'] === 'good') {
+                    $score += $weight;
+                } else if ($results[$check]['status'] === 'warning') {
+                    $score += ($weight * 0.5); // Half points for warnings
                 }
             }
-
-            return number_format(($score / $totalWeight) * 5, 2);
         }
 
-        private function checkNameServers($domain) {
-            try {
-                $records = dns_get_record($domain, DNS_NS);
-                if (count($records) >= 2) {
-                    return [
-                        'status' => 'good',
-                        'message' => 'Found ' . count($records) . ' name servers',
-                        'records' => array_map(function($r) { return $r['target']; }, $records)
-                    ];
-                } else if (count($records) === 1) {
-                    return [
-                        'status' => 'warning',
-                        'message' => 'Only one name server found. Multiple name servers are recommended.',
-                        'records' => array_map(function($r) { return $r['target']; }, $records)
-                    ];
-                }
-                return ['status' => 'bad', 'message' => 'No name servers found'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function checkSMTP($domain) {
-            try {
-                $mxRecords = dns_get_record($domain, DNS_MX);
-                if (!empty($mxRecords)) {
-                    return [
-                        'status' => 'good',
-                        'message' => 'Found ' . count($mxRecords) . ' SMTP servers',
-                        'records' => array_map(function($r) { 
-                            return ['host' => $r['target'], 'priority' => $r['pri']]; 
-                        }, $mxRecords)
-                    ];
-                }
-                return ['status' => 'bad', 'message' => 'No SMTP servers found'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function checkDNSSEC($domain) {
-            try {
-                $records = dns_get_record($domain, DNS_ANY);
-                foreach ($records as $record) {
-                    if (isset($record['type']) && ($record['type'] === 'RRSIG' || $record['type'] === 'DNSKEY')) {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled and valid'
-                        ];
-                    }
-                }
-                return ['status' => 'bad', 'message' => 'DNSSEC not enabled'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function checkSPF($domain) {
-            try {
-                $records = dns_get_record($domain, DNS_TXT);
-                foreach ($records as $record) {
-                    if (isset($record['txt']) && strpos($record['txt'], 'v=spf1') === 0) {
-                        $strength = $this->analyzeSPFStrength($record['txt']);
-                        return [
-                            'status' => 'good',
-                            'message' => 'SPF record found',
-                            'strength' => $strength,
-                            'record' => $record['txt']
-                        ];
-                    }
-                }
-                return ['status' => 'bad', 'message' => 'No SPF record found'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function analyzeSPFStrength($record) {
-            if (strpos($record, '-all') !== false) {
-                return 'strong';
-            } else if (strpos($record, '~all') !== false) {
-                return 'medium';
-            }
-            return 'weak';
-        }
-
-        private function checkDMARC($domain) {
-            try {
-                $records = dns_get_record('_dmarc.' . $domain, DNS_TXT);
-                foreach ($records as $record) {
-                    if (isset($record['txt']) && strpos($record['txt'], 'v=DMARC1') === 0) {
-                        $strength = $this->analyzeDMARCStrength($record['txt']);
-                        return [
-                            'status' => 'good',
-                            'message' => 'DMARC record found',
-                            'strength' => $strength,
-                            'record' => $record['txt']
-                        ];
-                    }
-                }
-                return ['status' => 'bad', 'message' => 'No DMARC record found'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function analyzeDMARCStrength($record) {
-            if (strpos($record, 'p=reject') !== false) {
-                return 'strong';
-            } else if (strpos($record, 'p=quarantine') !== false) {
-                return 'medium';
-            }
-            return 'weak';
-        }
-
-        private function checkDANE($domain) {
-            try {
-                $records = dns_get_record('_smtp._tcp.' . $domain, DNS_ANY);
-                foreach ($records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'TLSA') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DANE record found'
-                        ];
-                    }
-                }
-                return ['status' => 'bad', 'message' => 'No DANE record found'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function checkTLS($domain) {
-            try {
-                $mxRecords = dns_get_record($domain, DNS_MX);
-                if (!empty($mxRecords)) {
-                    // In a real implementation, you would try to establish TLS connections
-                    // to the MX servers. Here we're just checking for MX records.
-                    return [
-                        'status' => 'good',
-                        'message' => 'MX records found, TLS support assumed'
-                    ];
-                }
-                return ['status' => 'bad', 'message' => 'No MX records found'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function checkTLSReport($domain) {
-            try {
-                $records = dns_get_record('_smtp._tls.' . $domain, DNS_TXT);
-                foreach ($records as $record) {
-                    if (isset($record['txt']) && strpos($record['txt'], 'v=TLSRPTv1') === 0) {
-                        return [
-                            'status' => 'good',
-                            'message' => 'TLS reporting enabled',
-                            'record' => $record['txt']
-                        ];
-                    }
-                }
-                return ['status' => 'bad', 'message' => 'TLS reporting not enabled'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
-
-        private function checkMTASTS($domain) {
-            try {
-                $records = dns_get_record('_mta-sts.' . $domain, DNS_TXT);
-                foreach ($records as $record) {
-                    if (isset($record['txt']) && strpos($record['txt'], 'v=STSv1') === 0) {
-                        return [
-                            'status' => 'good',
-                            'message' => 'MTA-STS enabled',
-                            'record' => $record['txt']
-                        ];
-                    }
-                }
-                return ['status' => 'bad', 'message' => 'MTA-STS not enabled'];
-            } catch (Exception $e) {
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
-        }
+        return number_format(($score / $totalWeight) * 5, 2);
     }
     ?>
