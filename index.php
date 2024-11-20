@@ -58,13 +58,16 @@
     function generateSummary($results, $lang) {
         $strengths = [];
         $improvements = [];
+        $risks = [];
 
         foreach ($results as $key => $result) {
             if ($key === 'overall_score') continue;
 
             switch ($result['status']) {
                 case 'good':
-                    $message = $lang['messages'][$key . '_configured'] ?? ucfirst($key) . ' ' . $lang['status']['passed'];
+                    $message = isset($lang['messages'][$key . '_configured']) ? 
+                              $lang['messages'][$key . '_configured'] : 
+                              ucfirst($key) . ' ' . $lang['status']['passed'];
                     if (isset($result['strength'])) {
                         $message .= " ({$result['strength']})";
                     }
@@ -72,7 +75,9 @@
                     break;
 
                 case 'bad':
-                    $message = $lang['messages']['implement_' . $key] ?? ucfirst($key) . ' ' . $lang['status']['failed'];
+                    $message = isset($lang['messages']['implement_' . $key]) ? 
+                              $lang['messages']['implement_' . $key] : 
+                              ucfirst($key) . ' ' . $lang['status']['failed'];
                     $improvements[] = [
                         'message' => $message,
                         'key' => $key
@@ -80,7 +85,9 @@
                     break;
 
                 case 'warning':
-                    $message = $lang['messages']['improve_' . $key] ?? $lang['messages']['generic_improve'];
+                    $message = isset($lang['messages']['improve_' . $key]) ? 
+                              $lang['messages']['improve_' . $key] : 
+                              ucfirst($key) . ' ' . $lang['status']['warning'];
                     $improvements[] = [
                         'message' => $message,
                         'key' => $key
@@ -175,7 +182,7 @@
                                     </ul>
                                 </div>
 
-                                <!-- Separate Security Risks Section -->
+                                <!-- Security Risks Section -->
                                 <div>
                                     <h3 class="text-red-600 font-bold mb-2"><?php echo $lang['risks']; ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
