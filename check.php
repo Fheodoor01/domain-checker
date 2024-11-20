@@ -97,38 +97,39 @@
 
         private function checkDNSSEC($domain) {
             try {
-                // Check for DS records in parent zone
-                $ds_records = dns_get_record($domain, DNS_DS);
-                if (!empty($ds_records)) {
-                    return [
-                        'status' => 'good',
-                        'message' => 'DNSSEC is properly configured with DS records',
-                        'record' => 'Found ' . count($ds_records) . ' DS record(s)'
-                    ];
-                }
-
                 // Check for DNSKEY records
-                $dnskey_records = dns_get_record($domain, DNS_DNSKEY);
-                if (!empty($dnskey_records)) {
-                    return [
-                        'status' => 'good',
-                        'message' => 'DNSSEC is enabled with DNSKEY records',
-                        'record' => 'Found ' . count($dnskey_records) . ' DNSKEY record(s)'
-                    ];
-                }
+                $records = dns_get_record($domain, DNS_ANY);
+                $hasDNSKEY = false;
+                $hasRRSIG = false;
 
-                // Check for RRSIG as final fallback
-                $soa_records = dns_get_record($domain, DNS_SOA);
-                if (!empty($soa_records)) {
-                    foreach ($soa_records as $record) {
-                        if (isset($record['rrsig'])) {
-                            return [
-                                'status' => 'good',
-                                'message' => 'DNSSEC is enabled with RRSIG records',
-                                'record' => 'Found RRSIG records'
-                            ];
+                foreach ($records as $record) {
+                    if (isset($record['type'])) {
+                        if ($record['type'] === 'DNSKEY') {
+                            $hasDNSKEY = true;
+                        } elseif ($record['type'] === 'RRSIG') {
+                            $hasRRSIG = true;
                         }
                     }
+                }
+
+                if ($hasDNSKEY && $hasRRSIG) {
+                    return [
+                        'status' => 'good',
+                        'message' => 'DNSSEC is properly configured',
+                        'record' => 'Found DNSKEY and RRSIG records'
+                    ];
+                } elseif ($hasDNSKEY) {
+                    return [
+                        'status' => 'good',
+                        'message' => 'DNSSEC is enabled with DNSKEY',
+                        'record' => 'Found DNSKEY records'
+                    ];
+                } elseif ($hasRRSIG) {
+                    return [
+                        'status' => 'good',
+                        'message' => 'DNSSEC is enabled with RRSIG',
+                        'record' => 'Found RRSIG records'
+                    ];
                 }
 
                 return ['status' => 'bad', 'message' => 'DNSSEC not enabled or not properly configured'];
