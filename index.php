@@ -82,6 +82,9 @@
                         'message' => $message,
                         'key' => $key
                     ];
+                    if (isset($lang['risks'][$key])) {
+                        $risks[] = $lang['risks'][$key];
+                    }
                     break;
 
                 case 'warning':
@@ -98,7 +101,8 @@
 
         return [
             'strengths' => $strengths,
-            'improvements' => $improvements
+            'improvements' => $improvements,
+            'risks' => array_unique($risks)
         ];
     }
     ?>
@@ -183,25 +187,18 @@
                                 </div>
 
                                 <!-- Security Risks Section -->
-                                <div>
-                                    <h3 class="text-red-600 font-bold mb-2"><?php echo $lang['risks']; ?>:</h3>
-                                    <ul class="list-disc list-inside text-sm">
-                                        <?php 
-                                        $shown_risks = [];
-                                        foreach ($summary['improvements'] as $improvement):
-                                            if (isset($lang['risks'][$improvement['key']]) && 
-                                                !in_array($lang['risks'][$improvement['key']], $shown_risks)):
-                                                $shown_risks[] = $lang['risks'][$improvement['key']];
-                                        ?>
-                                            <li class="text-red-600">
-                                                <?php echo htmlspecialchars($lang['risks'][$improvement['key']]); ?>
-                                            </li>
-                                        <?php 
-                                            endif;
-                                        endforeach; 
-                                        ?>
-                                    </ul>
-                                </div>
+                                <?php if (!empty($summary['risks'])): ?>
+                                    <div>
+                                        <h3 class="text-red-600 font-bold mb-2"><?php echo $lang['risks']; ?>:</h3>
+                                        <ul class="list-disc list-inside text-sm">
+                                            <?php foreach ($summary['risks'] as $risk): ?>
+                                                <li class="text-red-600">
+                                                    <?php echo htmlspecialchars($risk); ?>
+                                                </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
