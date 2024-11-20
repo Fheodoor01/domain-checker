@@ -31,10 +31,23 @@
                 return 'text-green-600';
             case 'bad':
                 return 'text-red-600';
-            case 'info':
-                return 'text-blue-600';
-            default:
+            case 'warning':
                 return 'text-yellow-600';
+            default:
+                return 'text-gray-600';
+        }
+    }
+
+    function getStatusText($status) {
+        switch (strtolower($status)) {
+            case 'good':
+                return 'Passed';
+            case 'bad':
+                return 'Failed';
+            case 'warning':
+                return 'Warning';
+            default:
+                return 'Unknown';
         }
     }
     ?>
@@ -43,18 +56,12 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Domain Security Checker</title>
+        <title>Email Security Checker</title>
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-        <style>
-            .record-box {
-                word-break: break-word;
-                overflow-wrap: break-word;
-            }
-        </style>
     </head>
     <body class="bg-gray-100">
         <div class="container mx-auto px-4 py-8">
-            <h1 class="text-3xl font-bold mb-8">Domain Security Checker</h1>
+            <h1 class="text-3xl font-bold mb-8">Email Security Checker</h1>
             
             <div class="bg-white rounded-lg shadow p-6">
                 <form method="post" class="mb-6">
@@ -72,7 +79,7 @@
                         </button>
                     </div>
                 </form>
-                
+
                 <?php if ($error): ?>
                     <div class="text-red-500 p-4 mb-4 bg-red-50 rounded">
                         <?php echo htmlspecialchars($error); ?>
@@ -80,165 +87,84 @@
                 <?php endif; ?>
 
                 <?php if ($results): ?>
-                    <div class="space-y-4">
-                        <!-- SPF -->
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <h3 class="font-bold text-lg mb-2">SPF (Sender Policy Framework)</h3>
-                            <div class="space-y-2">
-                                <p>
-                                    <span class="font-semibold">Status:</span>
-                                    <span class="<?php echo getStatusColor($results['spf']['status']); ?> font-bold">
-                                        <?php echo htmlspecialchars(strtoupper($results['spf']['status'])); ?>
-                                    </span>
-                                </p>
-                                <?php if (isset($results['spf']['strength'])): ?>
-                                    <p>
-                                        <span class="font-semibold">Strength:</span>
-                                        <span class="font-bold">
-                                            <?php echo htmlspecialchars(strtoupper($results['spf']['strength'])); ?>
-                                        </span>
-                                    </p>
-                                <?php endif; ?>
-                                <?php if (isset($results['spf']['record'])): ?>
-                                    <p class="font-mono text-sm bg-gray-100 p-2 rounded record-box">
-                                        <?php echo htmlspecialchars($results['spf']['record']); ?>
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- DMARC -->
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <h3 class="font-bold text-lg mb-2">DMARC (Domain-based Message Authentication)</h3>
-                            <div class="space-y-2">
-                                <p>
-                                    <span class="font-semibold">Status:</span>
-                                    <span class="<?php echo getStatusColor($results['dmarc']['status']); ?> font-bold">
-                                        <?php echo htmlspecialchars(strtoupper($results['dmarc']['status'])); ?>
-                                    </span>
-                                </p>
-                                <?php if (isset($results['dmarc']['strength'])): ?>
-                                    <p>
-                                        <span class="font-semibold">Strength:</span>
-                                        <span class="font-bold">
-                                            <?php echo htmlspecialchars(strtoupper($results['dmarc']['strength'])); ?>
-                                        </span>
-                                    </p>
-                                <?php endif; ?>
-                                <?php if (isset($results['dmarc']['record'])): ?>
-                                    <p class="font-mono text-sm bg-gray-100 p-2 rounded record-box">
-                                        <?php echo htmlspecialchars($results['dmarc']['record']); ?>
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- DKIM -->
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <h3 class="font-bold text-lg mb-2">DKIM (DomainKeys Identified Mail)</h3>
-                            <div class="space-y-2">
-                                <?php
-                                $hasValidDkim = false;
-                                foreach ($results['dkim'] as $selector => $data):
-                                    if ($data['status'] === 'good'):
-                                        $hasValidDkim = true;
-                                ?>
-                                    <div class="p-2 bg-gray-100 rounded mb-2">
-                                        <p class="font-semibold">Selector: <?php echo htmlspecialchars($selector); ?></p>
-                                        <p>
-                                            <span class="font-semibold">Status:</span>
-                                            <span class="<?php echo getStatusColor($data['status']); ?> font-bold">
-                                                <?php echo htmlspecialchars(strtoupper($data['status'])); ?>
-                                            </span>
-                                        </p>
-                                        <?php if (isset($data['record'])): ?>
-                                            <p class="font-mono text-sm mt-1 record-box">
-                                                <?php echo htmlspecialchars($data['record']); ?>
-                                            </p>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php 
-                                    endif;
-                                endforeach;
-                                
-                                if (!$hasValidDkim): ?>
-                                    <p>
-                                        <span class="font-semibold">Status:</span>
-                                        <span class="text-red-600 font-bold">BAD</span>
-                                    </p>
-                                    <p>No valid DKIM record found</p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- BIMI -->
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <h3 class="font-bold text-lg mb-2">BIMI (Brand Indicators for Message Identification)</h3>
-                            <div class="space-y-2">
-                                <p>
-                                    <span class="font-semibold">Status:</span>
-                                    <span class="<?php echo getStatusColor($results['bimi']['status']); ?> font-bold">
-                                        <?php echo htmlspecialchars(strtoupper($results['bimi']['status'])); ?>
-                                    </span>
-                                </p>
-                                <?php if (isset($results['bimi']['message'])): ?>
-                                    <p>
-                                        <span class="font-semibold">Message:</span>
-                                        <?php echo htmlspecialchars($results['bimi']['message']); ?>
-                                    </p>
-                                <?php endif; ?>
-                                <?php if (isset($results['bimi']['record'])): ?>
-                                    <p class="font-mono text-sm bg-gray-100 p-2 rounded record-box">
-                                        <?php echo htmlspecialchars($results['bimi']['record']); ?>
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Zone Transfer -->
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <h3 class="font-bold text-lg mb-2">Zone Transfer</h3>
-                            <div class="space-y-2">
-                                <p>
-                                    <span class="font-semibold">Status:</span>
-                                    <span class="<?php echo getStatusColor($results['zone_transfer']['status']); ?> font-bold">
-                                        <?php echo htmlspecialchars(strtoupper($results['zone_transfer']['status'])); ?>
-                                    </span>
-                                </p>
-                                <?php if (isset($results['zone_transfer']['message'])): ?>
-                                    <p>
-                                        <span class="font-semibold">Message:</span>
-                                        <?php echo htmlspecialchars($results['zone_transfer']['message']); ?>
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- DNSSEC -->
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <h3 class="font-bold text-lg mb-2">DNSSEC</h3>
-                            <div class="space-y-2">
-                                <p>
-                                    <span class="font-semibold">Status:</span>
-                                    <span class="<?php echo getStatusColor($results['dnssec']['status']); ?> font-bold">
-                                        <?php echo htmlspecialchars(strtoupper($results['dnssec']['status'])); ?>
-                                    </span>
-                                </p>
-                                <?php if (isset($results['dnssec']['message'])): ?>
-                                    <p>
-                                        <span class="font-semibold">Message:</span>
-                                        <?php echo htmlspecialchars($results['dnssec']['message']); ?>
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
+                    <!-- Overall Score -->
+                    <div class="mb-6 text-center">
+                        <h2 class="text-2xl font-bold">Overall Score</h2>
+                        <p class="text-4xl font-bold <?php echo $results['overall_score'] >= 4 ? 'text-green-600' : 'text-yellow-600'; ?>">
+                            <?php echo $results['overall_score']; ?>/5
+                        </p>
                     </div>
-                <?php endif; ?>
 
-                <?php if ($debug): ?>
-                    <div class="mt-4 p-4 bg-gray-100 rounded">
-                        <h3 class="font-bold">Debug Output:</h3>
-                        <pre class="mt-2 text-sm"><?php echo htmlspecialchars(print_r($debug, true)); ?></pre>
+                    <div class="space-y-4">
+                        <?php
+                        $checks = [
+                            'nameservers' => 'Name Servers',
+                            'smtp' => 'SMTP Servers',
+                            'dnssec' => 'DNSSEC',
+                            'spf' => 'SPF',
+                            'dmarc' => 'DMARC',
+                            'dane' => 'DANE',
+                            'tls' => 'TLS',
+                            'tls_report' => 'TLS Report',
+                            'mta_sts' => 'MTA-STS'
+                        ];
+
+                        foreach ($checks as $key => $title):
+                            if (isset($results[$key])):
+                        ?>
+                            <div class="border rounded-lg p-4 bg-gray-50">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="font-bold text-lg"><?php echo htmlspecialchars($title); ?></h3>
+                                    <span class="<?php echo getStatusColor($results[$key]['status']); ?> font-bold">
+                                        <?php echo htmlspecialchars(getStatusText($results[$key]['status'])); ?>
+                                    </span>
+                                </div>
+
+                                <p class="text-gray-600 text-sm mb-2">
+                                    <?php echo htmlspecialchars($config['explanations'][$key]); ?>
+                                </p>
+
+                                <?php if (isset($results[$key]['message'])): ?>
+                                    <p class="mt-2">
+                                        <?php echo htmlspecialchars($results[$key]['message']); ?>
+                                    </p>
+                                <?php endif; ?>
+
+                                <?php if (isset($results[$key]['record'])): ?>
+                                    <p class="font-mono text-sm bg-gray-100 p-2 rounded mt-2 break-all">
+                                        <?php echo htmlspecialchars($results[$key]['record']); ?>
+                                    </p>
+                                <?php endif; ?>
+
+                                <?php if (isset($results[$key]['records']) && is_array($results[$key]['records'])): ?>
+                                    <div class="mt-2">
+                                        <?php foreach ($results[$key]['records'] as $record): ?>
+                                            <p class="font-mono text-sm bg-gray-100 p-2 rounded mt-1">
+                                                <?php 
+                                                if (is_array($record)) {
+                                                    echo htmlspecialchars("Priority: {$record['priority']}, Host: {$record['host']}");
+                                                } else {
+                                                    echo htmlspecialchars($record);
+                                                }
+                                                ?>
+                                            </p>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (isset($results[$key]['strength'])): ?>
+                                    <p class="mt-2">
+                                        <span class="font-semibold">Strength:</span>
+                                        <span class="font-bold">
+                                            <?php echo htmlspecialchars(strtoupper($results[$key]['strength'])); ?>
+                                        </span>
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+                        <?php 
+                            endif;
+                        endforeach; 
+                        ?>
                     </div>
                 <?php endif; ?>
             </div>
