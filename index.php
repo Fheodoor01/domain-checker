@@ -3,7 +3,13 @@
     ini_set('display_errors', 1);
 
     require_once 'check.php';
+    require_once 'language_detector.php';
     $config = require 'config.php';
+    $languages = require 'languages.php';
+
+    // Get current language
+    $currentLang = detectLanguage();
+    $lang = $languages[$currentLang];
 
     $results = null;
     $error = null;
@@ -36,84 +42,39 @@
         }
     }
 
-    function getStatusText($status) {
-        switch (strtolower($status)) {
-            case 'good':
-                return 'Passed';
-            case 'bad':
-                return 'Failed';
-            case 'warning':
-                return 'Warning';
-            default:
-                return 'Unknown';
-        }
+    function getStatusText($status, $lang) {
+        $status = strtolower($status);
+        return $lang['status'][$status] ?? $lang['status']['unknown'];
     }
 
-    function generateSummary($results) {
+    function generateSummary($results, $lang) {
         $strengths = [];
         $improvements = [];
         $risks = [];
 
-        // Check each component and build the summary
         foreach ($results as $key => $result) {
             if ($key === 'overall_score') continue;
 
             switch ($result['status']) {
                 case 'good':
-                    switch ($key) {
-                        case 'spf':
-                            $strengths[] = "SPF is properly configured" . 
-                                (isset($result['strength']) ? " with {$result['strength']} policy" : "");
-                            break;
-                        case 'dmarc':
-                            $strengths[] = "DMARC is properly configured" . 
-                                (isset($result['strength']) ? " with {$result['strength']} policy" : "");
-                            break;
-                        case 'nameservers':
-                            $strengths[] = "Multiple nameservers provide good redundancy";
-                            break;
-                        case 'dnssec':
-                            $strengths[] = "DNSSEC is enabled, protecting against DNS spoofing";
-                            break;
-                        case 'tls':
-                            $strengths[] = "TLS is properly configured for email security";
-                            break;
-                        default:
-                            $strengths[] = ucfirst($key) . " is properly configured";
+                    $message = $lang['messages'][$key . '_configured'] ?? ucfirst($key) . ' ' . $lang['status']['passed'];
+                    if (isset($result['strength'])) {
+                        $message .= " ({$result['strength']})";
                     }
+                    $strengths[] = $message;
                     break;
 
                 case 'bad':
-                    switch ($key) {
-                        case 'spf':
-                            $improvements[] = "Implement SPF to prevent email spoofing";
-                            $risks[] = "Emails could be spoofed from your domain";
-                            break;
-                        case 'dmarc':
-                            $improvements[] = "Implement DMARC to improve email authentication";
-                            $risks[] = "No policy for handling failed email authentication";
-                            break;
-                        case 'dnssec':
-                            $improvements[] = "Enable DNSSEC to prevent DNS spoofing";
-                            $risks[] = "Vulnerable to DNS spoofing attacks";
-                            break;
-                        case 'tls':
-                            $improvements[] = "Configure TLS for email transmission";
-                            $risks[] = "Emails might be transmitted without encryption";
-                            break;
-                        case 'mta_sts':
-                            $improvements[] = "Implement MTA-STS for improved mail security";
-                            break;
-                        case 'bimi':
-                            $improvements[] = "Consider implementing BIMI to display your logo in emails";
-                            break;
-                        default:
-                            $improvements[] = "Configure " . ucfirst($key);
+                    $message = $lang['messages']['implement_' . $key] ?? ucfirst($key) . ' ' . $lang['status']['failed'];
+                    $improvements[] = $message;
+                    
+                    if (isset($lang['risks'][$key])) {
+                        $risks[] = $lang['risks'][$key];
                     }
                     break;
 
                 case 'warning':
-                    $improvements[] = "Improve " . ucfirst($key) . " configuration";
+                    $improvements[] = $lang['messages']['improve_' . $key] ?? $lang['messages']['generic_improve'];
                     break;
             }
         }
@@ -126,16 +87,28 @@
     }
     ?>
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="<?php echo $currentLang; ?>">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Domain Test</title>
+        <title><?php echo $lang['title']; ?></title>
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     </head>
     <body class="bg-gray-100">
         <div class="container mx-auto px-4 py-8">
-            <h1 class="text-3xl font-bold mb-8">Domain Test</h1>
+            <!-- Language Selector and Creator Info -->
+            <div class="flex justify-between items-center mb-6">
+                <div class="text-sm text-gray-600">
+                    <?php echo $lang['created_by']; ?>
+                </div>
+                <div class="flex gap-2">
+                    <a href="?lang=en" class="<?php echo $currentLang === 'en' ? 'font-bold' : ''; ?>">EN</a>
+                    <span>|</span>
+                    <a href="?lang=nl" class="<?php echo $currentLang === 'nl' ? 'font-bold' : ''; ?>">NL</a>
+                </div>
+            </div>
+
+            <h1 class="text-3xl font-bold mb-8"><?php echo $lang['title']; ?></h1>
             
             <div class="bg-white rounded-lg shadow p-6">
                 <form method="post" class="mb-6">
@@ -144,12 +117,12 @@
                                id="domain" 
                                name="domain" 
                                class="flex-1 p-2 border rounded" 
-                               placeholder="Enter domain (e.g., google.com)" 
+                               placeholder="<?php echo $lang['enter_domain']; ?>" 
                                value="<?php echo htmlspecialchars($_POST['domain'] ?? ''); ?>"
                                required>
                         <button type="submit" 
                                 class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                            Check
+                            <?php echo $lang['check_button']; ?>
                         </button>
                     </div>
                 </form>
@@ -164,20 +137,20 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <!-- Score -->
                         <div class="text-center bg-gray-50 rounded-lg p-6">
-                            <h2 class="text-2xl font-bold mb-2">Overall Score</h2>
+                            <h2 class="text-2xl font-bold mb-2"><?php echo $lang['overall_score']; ?></h2>
                             <p class="text-4xl font-bold <?php echo $results['overall_score'] >= 4 ? 'text-green-600' : 'text-yellow-600'; ?>">
                                 <?php echo $results['overall_score']; ?>/5
                             </p>
                         </div>
 
                         <!-- Summary -->
-                        <?php $summary = generateSummary($results); ?>
+                        <?php $summary = generateSummary($results, $lang); ?>
                         <div class="bg-gray-50 rounded-lg p-6">
-                            <h2 class="text-2xl font-bold mb-4">Summary</h2>
+                            <h2 class="text-2xl font-bold mb-4"><?php echo $lang['summary']; ?></h2>
                             
                             <?php if (!empty($summary['strengths'])): ?>
                                 <div class="mb-4">
-                                    <h3 class="text-green-600 font-bold mb-2">Strengths:</h3>
+                                    <h3 class="text-green-600 font-bold mb-2"><?php echo $lang['strengths']; ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
                                         <?php foreach ($summary['strengths'] as $strength): ?>
                                             <li><?php echo htmlspecialchars($strength); ?></li>
@@ -188,7 +161,7 @@
 
                             <?php if (!empty($summary['improvements'])): ?>
                                 <div class="mb-4">
-                                    <h3 class="text-yellow-600 font-bold mb-2">Improvements Needed:</h3>
+                                    <h3 class="text-yellow-600 font-bold mb-2"><?php echo $lang['improvements']; ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
                                         <?php foreach ($summary['improvements'] as $improvement): ?>
                                             <li><?php echo htmlspecialchars($improvement); ?></li>
@@ -199,7 +172,7 @@
 
                             <?php if (!empty($summary['risks'])): ?>
                                 <div>
-                                    <h3 class="text-red-600 font-bold mb-2">Security Risks:</h3>
+                                    <h3 class="text-red-600 font-bold mb-2"><?php echo $lang['risks']; ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
                                         <?php foreach ($summary['risks'] as $risk): ?>
                                             <li><?php echo htmlspecialchars($risk); ?></li>
@@ -212,33 +185,19 @@
 
                     <!-- Detailed Results -->
                     <div class="space-y-4">
-                        <?php
-                        $checks = [
-                            'nameservers' => 'Name Servers',
-                            'smtp' => 'SMTP Servers',
-                            'dnssec' => 'DNSSEC',
-                            'spf' => 'SPF',
-                            'dmarc' => 'DMARC',
-                            'dane' => 'DANE',
-                            'tls' => 'TLS',
-                            'tls_report' => 'TLS Report',
-                            'mta_sts' => 'MTA-STS',
-                            'bimi' => 'BIMI'
-                        ];
-
-                        foreach ($checks as $key => $title):
+                        <?php foreach ($lang['sections'] as $key => $title):
                             if (isset($results[$key])):
                         ?>
                             <div class="border rounded-lg p-4 bg-gray-50">
                                 <div class="flex justify-between items-center mb-2">
                                     <h3 class="font-bold text-lg"><?php echo htmlspecialchars($title); ?></h3>
                                     <span class="<?php echo getStatusColor($results[$key]['status']); ?> font-bold">
-                                        <?php echo htmlspecialchars(getStatusText($results[$key]['status'])); ?>
+                                        <?php echo htmlspecialchars(getStatusText($results[$key]['status'], $lang)); ?>
                                     </span>
                                 </div>
 
                                 <p class="text-gray-600 text-sm mb-2">
-                                    <?php echo htmlspecialchars($config['explanations'][$key]); ?>
+                                    <?php echo htmlspecialchars($lang['explanations'][$key]); ?>
                                 </p>
 
                                 <?php if (isset($results[$key]['message'])): ?>
@@ -271,7 +230,7 @@
 
                                 <?php if (isset($results[$key]['strength'])): ?>
                                     <p class="mt-2">
-                                        <span class="font-semibold">Strength:</span>
+                                        <span class="font-semibold"><?php echo $lang['strength']; ?>:</span>
                                         <span class="font-bold">
                                             <?php echo htmlspecialchars(strtoupper($results[$key]['strength'])); ?>
                                         </span>
@@ -284,6 +243,11 @@
                         ?>
                     </div>
                 <?php endif; ?>
+            </div>
+
+            <!-- Footer with creator info -->
+            <div class="text-center mt-8 text-gray-600 text-sm">
+                <?php echo $lang['created_by']; ?>
             </div>
         </div>
     </body>
