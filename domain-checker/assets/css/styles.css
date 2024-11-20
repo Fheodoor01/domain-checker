@@ -1,0 +1,99 @@
+.domain-checker-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .domain-checker-form {
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .domain-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .check-button {
+        padding: 10px 20px;
+        background-color: #0073aa;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .check-button:hover {
+        background-color: #005177;
+    }
+
+    .domain-checker-results {
+        margin-top: 20px;
+    }
+
+    .result-section {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .score-section {
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .status-good {
+        color: #46b450;
+    }
+
+    .status-bad {
+        color: #dc3232;
+    }
+
+    .status-warning {
+        color: #ffb900;
+    }
+
+    .domain-checker-error {
+        background-color: #ffebee;
+        color: #dc3232;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    .strengths-section {
+        color: #46b450;
+    }
+
+    .improvements-section {
+        color: #ffb900;
+    }
+
+    .risks-section {
+        color: #dc3232;
+    }
+
+    .section-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .record-details {
+        font-family: monospace;
+        background: #f0f0f0;
+        padding: 8px;
+        border-radius: 4px;
+        margin-top: 5px;
+        word-break: break-all;
+    }
