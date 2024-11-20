@@ -1,57 +1,29 @@
 <?php
-    // Add this method to the DomainChecker class
+    // Only add this new method to your existing DomainChecker class
     private function checkBIMI($domain) {
         try {
-            // First check if DMARC is properly configured (required for BIMI)
-            $dmarcResult = $this->checkDMARC($domain);
-            if ($dmarcResult['status'] !== 'good' || 
-                (!isset($dmarcResult['strength']) || $dmarcResult['strength'] !== 'strong')) {
-                return [
-                    'status' => 'bad',
-                    'message' => 'BIMI requires strict DMARC policy (p=reject)',
-                    'details' => 'Configure DMARC with p=reject before implementing BIMI'
-                ];
-            }
-
-            // Check default BIMI record
             $records = dns_get_record('default._bimi.' . $domain, DNS_TXT);
             if (!empty($records)) {
                 foreach ($records as $record) {
                     if (isset($record['txt']) && strpos($record['txt'], 'v=BIMI1') === 0) {
-                        // Parse BIMI record to check for required fields
-                        $hasSVG = strpos($record['txt'], 'l=') !== false;
-                        $hasVMC = strpos($record['txt'], 'a=') !== false;
-                        
-                        $status = $hasVMC ? 'good' : 'warning';
-                        $message = $hasVMC ? 
-                            'BIMI record found with VMC certificate' : 
-                            'BIMI record found but missing VMC certificate';
-                        
-                        $details = [];
-                        if ($hasSVG) $details[] = 'SVG logo URL present';
-                        if ($hasVMC) $details[] = 'VMC certificate present';
-                        
                         return [
-                            'status' => $status,
-                            'message' => $message,
-                            'record' => $record['txt'],
-                            'details' => implode(', ', $details)
+                            'status' => 'good',
+                            'message' => 'BIMI record found',
+                            'record' => $record['txt']
                         ];
                     }
                 }
             }
-            
             return [
                 'status' => 'bad',
-                'message' => 'No BIMI record found',
-                'details' => 'Add a BIMI record to display your logo in supporting email clients'
+                'message' => 'No BIMI record found'
             ];
         } catch (Exception $e) {
             return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
         }
     }
 
-    // Update the checkAll method to include BIMI
+    // Update your existing checkAll method to include BIMI
     public function checkAll($domain) {
         $results = [
             'nameservers' => $this->checkNameServers($domain),
@@ -66,14 +38,14 @@
             'bimi' => $this->checkBIMI($domain)  // Add BIMI check
         ];
 
-        // Update weights in calculateScore method
+        // Calculate overall score
         $score = $this->calculateScore($results);
         $results['overall_score'] = $score;
 
         return $results;
     }
 
-    // Update the calculateScore method to include BIMI
+    // Update your existing calculateScore method to include BIMI
     private function calculateScore($results) {
         $weights = [
             'nameservers' => 0.5,
@@ -96,8 +68,6 @@
                 $totalWeight += $weight;
                 if ($results[$check]['status'] === 'good') {
                     $score += $weight;
-                } else if ($results[$check]['status'] === 'warning') {
-                    $score += ($weight * 0.5); // Half points for warnings
                 }
             }
         }
