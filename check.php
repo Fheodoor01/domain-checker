@@ -120,36 +120,46 @@
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
 
-                // Try ANY query first
-                $records = dns_get_record($domain, DNS_ANY);
-                $this->addDebug('DNSSEC', 'DNS_ANY records found', $records);
+                // Try to get all record types
+                $records = dns_get_record($domain, DNS_ALL);
+                $this->addDebug('DNSSEC', 'Found DNS records', $records);
 
+                // Look for DNSSEC-specific records in the response
                 foreach ($records as $record) {
                     if (isset($record['type'])) {
-                        $this->addDebug('DNSSEC', 'Checking record type: ' . $record['type']);
+                        $type = strtoupper($record['type']);
+                        $this->addDebug('DNSSEC', 'Checking record type: ' . $type);
                         
-                        if (in_array(strtoupper($record['type']), ['DNSKEY', 'RRSIG', 'DS', 'NSEC', 'NSEC3'])) {
-                            $this->addDebug('DNSSEC', 'Found DNSSEC record type: ' . $record['type']);
+                        // Check for common DNSSEC record types
+                        if (in_array($type, ['DNSKEY', 'RRSIG', 'DS', 'NSEC', 'NSEC3'])) {
                             return [
                                 'status' => 'good',
                                 'message' => 'DNSSEC is enabled',
-                                'record' => 'Found ' . $record['type'] . ' record'
+                                'record' => 'Found ' . $type . ' record'
                             ];
                         }
                     }
-                }
 
-                // Try SOA records
-                $soa_records = dns_get_record($domain, DNS_SOA);
-                $this->addDebug('DNSSEC', 'Checking SOA records', $soa_records);
-
-                foreach ($soa_records as $record) {
-                    if (isset($record['rrsig'])) {
-                        $this->addDebug('DNSSEC', 'Found RRSIG in SOA record');
+                    // Check for RRSIG in record attributes
+                    if (isset($record['rrsig']) || isset($record['sig'])) {
                         return [
                             'status' => 'good',
                             'message' => 'DNSSEC is enabled (RRSIG found)',
-                            'record' => 'Found RRSIG in SOA record'
+                            'record' => 'Found RRSIG record'
+                        ];
+                    }
+                }
+
+                // Try to get specific TXT records that might indicate DNSSEC
+                $txt_records = dns_get_record($domain, DNS_TXT);
+                foreach ($txt_records as $record) {
+                    if (isset($record['txt']) && 
+                        (stripos($record['txt'], 'dnssec') !== false || 
+                         stripos($record['txt'], 'signed') !== false)) {
+                        return [
+                            'status' => 'good',
+                            'message' => 'DNSSEC is enabled',
+                            'record' => $record['txt']
                         ];
                     }
                 }
@@ -158,6 +168,88 @@
                 return ['status' => 'bad', 'message' => 'DNSSEC not detected'];
             } catch (Exception $e) {
                 $this->addDebug('DNSSEC', 'Error: ' . $e->getMessage());
+                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
+            }
+        }
+
+        private function checkDane($domain) {
+            try {
+                $this->addDebug('DANE', 'Starting DANE check for: ' . $domain);
+
+                // Get MX records first
+                $mx_records = dns_get_record($domain, DNS_MX);
+                $this->addDebug('DANE', 'Found MX records', $mx_records);
+
+                if (!empty($mx_records)) {
+                    foreach ($mx_records as $mx) {
+                        $mx_host = rtrim($mx['target'], '.');
+                        $this->addDebug('DANE', 'Checking MX host: ' . $mx_host);
+
+                        // Check common DANE record locations
+                        $check_locations = [
+                            '_25._tcp.',
+                            '_465._tcp.',
+                            '_587._tcp.',
+                            '_submission._tcp.',
+                            '_submissions._tcp.'
+                        ];
+
+                        foreach ($check_locations as $prefix) {
+                            $check_domain = $prefix . $mx_host;
+                            $this->addDebug('DANE', 'Checking location: ' . $check_domain);
+
+                            $records = dns_get_record($check_domain, DNS_ANY);
+                            $this->addDebug('DANE', 'Records found', $records);
+
+                            foreach ($records as $record) {
+                                if (isset($record['type'])) {
+                                    $type = strtoupper($record['type']);
+                                    $this->addDebug('DANE', 'Found record type: ' . $type);
+
+                                    // Check for TLSA records or type 52 (TLSA)
+                                    if ($type === 'TLSA' || $type === '52' || 
+                                        (isset($record['txt']) && strpos($record['txt'], 'TLSA') !== false)) {
+                                        return [
+                                            'status' => 'good',
+                                            'message' => 'DANE is properly configured for ' . $mx_host,
+                                            'record' => 'Found TLSA record at ' . $check_domain
+                                        ];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check direct domain as fallback
+                foreach (['_25._tcp.', '_465._tcp.', '_587._tcp.'] as $prefix) {
+                    $check_domain = $prefix . $domain;
+                    $this->addDebug('DANE', 'Checking direct domain: ' . $check_domain);
+
+                    $records = dns_get_record($check_domain, DNS_ANY);
+                    $this->addDebug('DANE', 'Records found', $records);
+
+                    foreach ($records as $record) {
+                        if (isset($record['type'])) {
+                            $type = strtoupper($record['type']);
+                            $this->addDebug('DANE', 'Found record type: ' . $type);
+
+                            if ($type === 'TLSA' || $type === '52' || 
+                                (isset($record['txt']) && strpos($record['txt'], 'TLSA') !== false)) {
+                                return [
+                                    'status' => 'good',
+                                    'message' => 'DANE is enabled for domain',
+                                    'record' => 'Found TLSA record at ' . $check_domain
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                $this->addDebug('DANE', 'No DANE records found');
+                return ['status' => 'bad', 'message' => 'No DANE records found'];
+            } catch (Exception $e) {
+                $this->addDebug('DANE', 'Error: ' . $e->getMessage());
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
             }
         }
@@ -226,82 +318,6 @@
                 return 'medium';
             }
             return 'weak';
-        }
-
-        private function checkDane($domain) {
-            try {
-                $this->addDebug('DANE', 'Starting DANE check for: ' . $domain);
-
-                // Get MX records first
-                $mx_records = dns_get_record($domain, DNS_MX);
-                $this->addDebug('DANE', 'Found MX records', $mx_records);
-
-                if (!empty($mx_records)) {
-                    foreach ($mx_records as $mx) {
-                        $mx_host = rtrim($mx['target'], '.');
-                        $this->addDebug('DANE', 'Checking MX host: ' . $mx_host);
-                        
-                        $check_locations = [
-                            '_25._tcp.',
-                            '_465._tcp.',
-                            '_587._tcp.',
-                            '_submission._tcp.',
-                            '_submissions._tcp.'
-                        ];
-
-                        foreach ($check_locations as $prefix) {
-                            $check_domain = $prefix . $mx_host;
-                            $this->addDebug('DANE', 'Checking location: ' . $check_domain);
-                            
-                            $records = dns_get_record($check_domain, DNS_ANY);
-                            $this->addDebug('DANE', 'Records found for ' . $check_domain, $records);
-
-                            foreach ($records as $record) {
-                                if (isset($record['type'])) {
-                                    $this->addDebug('DANE', 'Found record type: ' . $record['type']);
-                                    if (strtoupper($record['type']) === 'TLSA' || 
-                                        strpos($record['type'], '52') !== false) {
-                                        return [
-                                            'status' => 'good',
-                                            'message' => 'DANE is properly configured for ' . $mx_host,
-                                            'record' => 'Found TLSA record at ' . $check_domain
-                                        ];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Direct domain checks
-                foreach (['_25._tcp.', '_465._tcp.', '_587._tcp.'] as $prefix) {
-                    $check_domain = $prefix . $domain;
-                    $this->addDebug('DANE', 'Checking direct domain: ' . $check_domain);
-                    
-                    $records = dns_get_record($check_domain, DNS_ANY);
-                    $this->addDebug('DANE', 'Records found for direct domain', $records);
-
-                    foreach ($records as $record) {
-                        if (isset($record['type'])) {
-                            $this->addDebug('DANE', 'Found record type: ' . $record['type']);
-                            if (strtoupper($record['type']) === 'TLSA' || 
-                                strpos($record['type'], '52') !== false) {
-                                return [
-                                    'status' => 'good',
-                                    'message' => 'DANE is enabled for domain',
-                                    'record' => 'Found TLSA record at ' . $check_domain
-                                ];
-                            }
-                        }
-                    }
-                }
-
-                $this->addDebug('DANE', 'No DANE records found');
-                return ['status' => 'bad', 'message' => 'No DANE records found'];
-            } catch (Exception $e) {
-                $this->addDebug('DANE', 'Error: ' . $e->getMessage());
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
-            }
         }
 
         private function checkTls($domain) {
