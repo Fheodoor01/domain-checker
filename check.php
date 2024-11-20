@@ -97,16 +97,41 @@
 
         private function checkDNSSEC($domain) {
             try {
-                $records = dns_get_record($domain, DNS_ANY);
-                foreach ($records as $record) {
-                    if (isset($record['type']) && ($record['type'] === 'RRSIG' || $record['type'] === 'DNSKEY')) {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled and valid'
-                        ];
+                // Check for DS records in parent zone
+                $ds_records = dns_get_record($domain, DNS_DS);
+                if (!empty($ds_records)) {
+                    return [
+                        'status' => 'good',
+                        'message' => 'DNSSEC is properly configured with DS records',
+                        'record' => 'Found ' . count($ds_records) . ' DS record(s)'
+                    ];
+                }
+
+                // Check for DNSKEY records
+                $dnskey_records = dns_get_record($domain, DNS_DNSKEY);
+                if (!empty($dnskey_records)) {
+                    return [
+                        'status' => 'good',
+                        'message' => 'DNSSEC is enabled with DNSKEY records',
+                        'record' => 'Found ' . count($dnskey_records) . ' DNSKEY record(s)'
+                    ];
+                }
+
+                // Check for RRSIG as final fallback
+                $soa_records = dns_get_record($domain, DNS_SOA);
+                if (!empty($soa_records)) {
+                    foreach ($soa_records as $record) {
+                        if (isset($record['rrsig'])) {
+                            return [
+                                'status' => 'good',
+                                'message' => 'DNSSEC is enabled with RRSIG records',
+                                'record' => 'Found RRSIG records'
+                            ];
+                        }
                     }
                 }
-                return ['status' => 'bad', 'message' => 'DNSSEC not enabled'];
+
+                return ['status' => 'bad', 'message' => 'DNSSEC not enabled or not properly configured'];
             } catch (Exception $e) {
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
             }
@@ -172,16 +197,54 @@
 
         private function checkDANE($domain) {
             try {
-                $records = dns_get_record('_smtp._tcp.' . $domain, DNS_ANY);
-                foreach ($records as $record) {
+                // First check MX records
+                $mx_records = dns_get_record($domain, DNS_MX);
+                if (!empty($mx_records)) {
+                    foreach ($mx_records as $mx) {
+                        // Check TLSA records for the MX host
+                        $mx_host = rtrim($mx['target'], '.');
+                        $tlsa_records = dns_get_record('_25._tcp.' . $mx_host, DNS_ANY);
+                        
+                        foreach ($tlsa_records as $record) {
+                            if (isset($record['type']) && $record['type'] === 'TLSA') {
+                                return [
+                                    'status' => 'good',
+                                    'message' => 'DANE is properly configured for MX: ' . $mx_host,
+                                    'record' => 'Found TLSA record for ' . $mx_host
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                // Check direct domain TLSA records
+                $direct_check = dns_get_record('_25._tcp.' . $domain, DNS_ANY);
+                foreach ($direct_check as $record) {
                     if (isset($record['type']) && $record['type'] === 'TLSA') {
                         return [
                             'status' => 'good',
-                            'message' => 'DANE record found'
+                            'message' => 'DANE is enabled for domain',
+                            'record' => 'Found TLSA record for domain'
                         ];
                     }
                 }
-                return ['status' => 'bad', 'message' => 'No DANE record found'];
+
+                // Check submission ports as fallback
+                $submission_ports = ['submission', 'submissions'];
+                foreach ($submission_ports as $port) {
+                    $records = dns_get_record('_' . $port . '._tcp.' . $domain, DNS_ANY);
+                    foreach ($records as $record) {
+                        if (isset($record['type']) && $record['type'] === 'TLSA') {
+                            return [
+                                'status' => 'good',
+                                'message' => 'DANE is enabled for ' . strtoupper($port),
+                                'record' => 'Found TLSA record for ' . strtoupper($port)
+                            ];
+                        }
+                    }
+                }
+
+                return ['status' => 'bad', 'message' => 'No DANE records found'];
             } catch (Exception $e) {
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
             }
