@@ -7,10 +7,8 @@
 
     $results = null;
     $error = null;
-    $debug = [];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $debug['post_data'] = $_POST;
         $domain = $_POST['domain'] ?? '';
         
         if (empty($domain)) {
@@ -50,6 +48,82 @@
                 return 'Unknown';
         }
     }
+
+    function generateSummary($results) {
+        $strengths = [];
+        $improvements = [];
+        $risks = [];
+
+        // Check each component and build the summary
+        foreach ($results as $key => $result) {
+            if ($key === 'overall_score') continue;
+
+            switch ($result['status']) {
+                case 'good':
+                    switch ($key) {
+                        case 'spf':
+                            $strengths[] = "SPF is properly configured" . 
+                                (isset($result['strength']) ? " with {$result['strength']} policy" : "");
+                            break;
+                        case 'dmarc':
+                            $strengths[] = "DMARC is properly configured" . 
+                                (isset($result['strength']) ? " with {$result['strength']} policy" : "");
+                            break;
+                        case 'nameservers':
+                            $strengths[] = "Multiple nameservers provide good redundancy";
+                            break;
+                        case 'dnssec':
+                            $strengths[] = "DNSSEC is enabled, protecting against DNS spoofing";
+                            break;
+                        case 'tls':
+                            $strengths[] = "TLS is properly configured for email security";
+                            break;
+                        default:
+                            $strengths[] = ucfirst($key) . " is properly configured";
+                    }
+                    break;
+
+                case 'bad':
+                    switch ($key) {
+                        case 'spf':
+                            $improvements[] = "Implement SPF to prevent email spoofing";
+                            $risks[] = "Emails could be spoofed from your domain";
+                            break;
+                        case 'dmarc':
+                            $improvements[] = "Implement DMARC to improve email authentication";
+                            $risks[] = "No policy for handling failed email authentication";
+                            break;
+                        case 'dnssec':
+                            $improvements[] = "Enable DNSSEC to prevent DNS spoofing";
+                            $risks[] = "Vulnerable to DNS spoofing attacks";
+                            break;
+                        case 'tls':
+                            $improvements[] = "Configure TLS for email transmission";
+                            $risks[] = "Emails might be transmitted without encryption";
+                            break;
+                        case 'mta_sts':
+                            $improvements[] = "Implement MTA-STS for improved mail security";
+                            break;
+                        case 'bimi':
+                            $improvements[] = "Consider implementing BIMI to display your logo in emails";
+                            break;
+                        default:
+                            $improvements[] = "Configure " . ucfirst($key);
+                    }
+                    break;
+
+                case 'warning':
+                    $improvements[] = "Improve " . ucfirst($key) . " configuration";
+                    break;
+            }
+        }
+
+        return [
+            'strengths' => $strengths,
+            'improvements' => $improvements,
+            'risks' => $risks
+        ];
+    }
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -87,13 +161,56 @@
                 <?php endif; ?>
 
                 <?php if ($results): ?>
-                    <div class="mb-6 text-center">
-                        <h2 class="text-2xl font-bold">Overall Score</h2>
-                        <p class="text-4xl font-bold <?php echo $results['overall_score'] >= 4 ? 'text-green-600' : 'text-yellow-600'; ?>">
-                            <?php echo $results['overall_score']; ?>/5
-                        </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <!-- Score -->
+                        <div class="text-center bg-gray-50 rounded-lg p-6">
+                            <h2 class="text-2xl font-bold mb-2">Overall Score</h2>
+                            <p class="text-4xl font-bold <?php echo $results['overall_score'] >= 4 ? 'text-green-600' : 'text-yellow-600'; ?>">
+                                <?php echo $results['overall_score']; ?>/5
+                            </p>
+                        </div>
+
+                        <!-- Summary -->
+                        <?php $summary = generateSummary($results); ?>
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h2 class="text-2xl font-bold mb-4">Summary</h2>
+                            
+                            <?php if (!empty($summary['strengths'])): ?>
+                                <div class="mb-4">
+                                    <h3 class="text-green-600 font-bold mb-2">Strengths:</h3>
+                                    <ul class="list-disc list-inside text-sm">
+                                        <?php foreach ($summary['strengths'] as $strength): ?>
+                                            <li><?php echo htmlspecialchars($strength); ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($summary['improvements'])): ?>
+                                <div class="mb-4">
+                                    <h3 class="text-yellow-600 font-bold mb-2">Improvements Needed:</h3>
+                                    <ul class="list-disc list-inside text-sm">
+                                        <?php foreach ($summary['improvements'] as $improvement): ?>
+                                            <li><?php echo htmlspecialchars($improvement); ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($summary['risks'])): ?>
+                                <div>
+                                    <h3 class="text-red-600 font-bold mb-2">Security Risks:</h3>
+                                    <ul class="list-disc list-inside text-sm">
+                                        <?php foreach ($summary['risks'] as $risk): ?>
+                                            <li><?php echo htmlspecialchars($risk); ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
+                    <!-- Detailed Results -->
                     <div class="space-y-4">
                         <?php
                         $checks = [
@@ -165,13 +282,6 @@
                             endif;
                         endforeach; 
                         ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($debug): ?>
-                    <div class="mt-4 p-4 bg-gray-100 rounded">
-                        <h3 class="font-bold">Debug Output:</h3>
-                        <pre class="mt-2 text-sm"><?php echo htmlspecialchars(print_r($debug, true)); ?></pre>
                     </div>
                 <?php endif; ?>
             </div>
