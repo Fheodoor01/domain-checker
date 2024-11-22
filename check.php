@@ -128,68 +128,53 @@
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
                 
-                // Check for A record RRSIG
-                $a_records = @dns_get_record($domain, DNS_A | DNS_RRSIG);
-                $this->addDebug('DNSSEC', 'A and RRSIG records', $a_records);
+                // Get all records including potential DNSSEC records
+                $records = @dns_get_record($domain, DNS_ANY);
+                $this->addDebug('DNSSEC', 'Found records', $records);
                 
                 $has_rrsig = false;
-                foreach ($a_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'RRSIG') {
+                $has_dnskey = false;
+                
+                foreach ($records as $record) {
+                    if (!isset($record['type'])) continue;
+                    
+                    if ($record['type'] === 'RRSIG') {
                         $has_rrsig = true;
+                    } else if ($record['type'] === 'DNSKEY') {
+                        $has_dnskey = true;
+                    }
+                    
+                    // If we found both, we can stop checking
+                    if ($has_rrsig && $has_dnskey) {
                         break;
                     }
                 }
                 
                 if ($has_rrsig) {
-                    // Also check for DNSKEY
-                    $dnskey_records = @dns_get_record($domain, DNS_ANY);
-                    $has_dnskey = false;
-                    foreach ($dnskey_records as $record) {
-                        if (isset($record['type']) && $record['type'] === 'DNSKEY') {
-                            $has_dnskey = true;
-                            break;
-                        }
-                    }
-                    
                     return [
                         'status' => 'good',
                         'message' => 'DNSSEC is enabled and working (RRSIG records found)',
                         'records' => [
                             'has_rrsig' => true,
                             'has_dnskey' => $has_dnskey,
-                            'found_records' => $a_records
+                            'found_records' => array_filter($records, function($record) {
+                                return isset($record['type']) && 
+                                       in_array($record['type'], ['RRSIG', 'DNSKEY', 'DS']);
+                            })
                         ]
                     ];
                 }
                 
-                // Double check with NS records
-                $ns_records = @dns_get_record($domain, DNS_NS | DNS_RRSIG);
-                foreach ($ns_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'RRSIG') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled and working (RRSIG records found on NS)',
-                            'records' => [
-                                'has_rrsig' => true,
-                                'found_records' => $ns_records
-                            ]
-                        ];
-                    }
-                }
-                
-                // One final check with ANY
-                $any_records = @dns_get_record($domain, DNS_ANY);
-                foreach ($any_records as $record) {
-                    if (isset($record['type']) && ($record['type'] === 'RRSIG' || $record['type'] === 'DNSKEY')) {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC appears to be enabled',
-                            'records' => [
-                                'has_rrsig_or_dnskey' => true,
-                                'found_records' => $record
-                            ]
-                        ];
-                    }
+                // Check for DNSKEY as a fallback
+                if ($has_dnskey) {
+                    return [
+                        'status' => 'warning',
+                        'message' => 'DNSSEC appears to be partially configured (DNSKEY found but no RRSIG)',
+                        'records' => [
+                            'has_rrsig' => false,
+                            'has_dnskey' => true
+                        ]
+                    ];
                 }
                 
                 return ['status' => 'bad', 'message' => 'DNSSEC not detected'];
@@ -232,38 +217,37 @@
                         foreach ($check_locations as $prefix) {
                             $check_domain = $prefix . $mx_host;
                             
-                            // Try both ANY and TXT record types
-                            $records = array_merge(
-                                @dns_get_record($check_domain, DNS_ANY) ?: [],
-                                @dns_get_record($check_domain, DNS_TXT) ?: []
-                            );
-                            
+                            // Get all records
+                            $records = @dns_get_record($check_domain, DNS_ANY);
                             $this->addDebug('DANE', 'Checking records for ' . $check_domain, $records);
                             
                             foreach ($records as $record) {
-                                // Check for TLSA records
-                                if (isset($record['type']) && $record['type'] === 'TLSA') {
-                                    return [
-                                        'status' => 'good',
-                                        'message' => 'DANE is configured with TLSA records for ' . $mx_host,
-                                        'records' => [
-                                            'tlsa' => $record,
-                                            'port' => str_replace(['_', '._tcp.'], '', $prefix)
-                                        ]
-                                    ];
-                                }
-                                
-                                // Also check for potential TLSA data in TXT records
-                                if (isset($record['type']) && $record['type'] === 'TXT' && 
-                                    isset($record['txt']) && strpos($record['txt'], 'TLSA') !== false) {
-                                    return [
-                                        'status' => 'warning',
-                                        'message' => 'Possible DANE configuration found in TXT record for ' . $mx_host,
-                                        'records' => [
-                                            'txt' => $record,
-                                            'port' => str_replace(['_', '._tcp.'], '', $prefix)
-                                        ]
-                                    ];
+                                if (isset($record['type'])) {
+                                    // Check for TLSA records
+                                    if ($record['type'] === 'TLSA') {
+                                        return [
+                                            'status' => 'good',
+                                            'message' => 'DANE is configured with TLSA records for ' . $mx_host,
+                                            'records' => [
+                                                'tlsa' => $record,
+                                                'port' => str_replace(['_', '._tcp.'], '', $prefix)
+                                            ]
+                                        ];
+                                    }
+                                    
+                                    // Also check TXT records for TLSA data
+                                    if ($record['type'] === 'TXT' && 
+                                        isset($record['txt']) && 
+                                        strpos($record['txt'], 'TLSA') !== false) {
+                                        return [
+                                            'status' => 'warning',
+                                            'message' => 'Possible DANE configuration found in TXT record for ' . $mx_host,
+                                            'records' => [
+                                                'txt' => $record,
+                                                'port' => str_replace(['_', '._tcp.'], '', $prefix)
+                                            ]
+                                        ];
+                                    }
                                 }
                             }
                         }
