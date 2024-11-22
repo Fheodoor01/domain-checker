@@ -124,6 +124,34 @@
             return ['output' => $output, 'status' => $return_var];
         }
 
+        private function checkDnssecUsingDig($domain) {
+            try {
+                $command = sprintf('dig +dnssec %s', escapeshellarg($domain));
+                $output = [];
+                $return_var = 0;
+                exec($command, $output, $return_var);
+                
+                $this->addDebug('DNSSEC', 'Dig command output:', $output);
+                
+                if ($return_var !== 0) {
+                    return false;
+                }
+                
+                // Look for DNSSEC indicators in dig output
+                $output_str = implode("\n", $output);
+                if (strpos($output_str, 'RRSIG') !== false || 
+                    strpos($output_str, 'DNSKEY') !== false || 
+                    strpos($output_str, 'flags: do') !== false) {
+                    return true;
+                }
+                
+                return false;
+            } catch (Exception $e) {
+                $this->addDebug('DNSSEC', 'Dig check error: ' . $e->getMessage());
+                return false;
+            }
+        }
+
         private function checkDnssecUsingDNS($domain) {
             try {
                 // Try to get DNSSEC-related records
@@ -158,36 +186,6 @@
             }
         }
 
-        private function checkDnssecUsingHeaders($domain) {
-            try {
-                // Use type 1 (A record) for header checking
-                $records = @dns_get_record($domain, 1, $authns, $addtl, true);
-                if ($records === false) {
-                    return false;
-                }
-                
-                $this->addDebug('DNSSEC', 'Header check results:', [
-                    'records' => $records,
-                    'authns' => $authns,
-                    'addtl' => $addtl
-                ]);
-                
-                // Check additional records
-                if (!empty($addtl)) {
-                    foreach ($addtl as $record) {
-                        if (isset($record['type']) && in_array($record['type'], ['DNSKEY', 'DS', 'RRSIG'])) {
-                            return true;
-                        }
-                    }
-                }
-                
-                return false;
-            } catch (Exception $e) {
-                $this->addDebug('DNSSEC', 'Header check error: ' . $e->getMessage());
-                return false;
-            }
-        }
-
         private function checkDnssecUsingTXT($domain) {
             try {
                 $txt_records = @dns_get_record($domain, DNS_TXT);
@@ -217,10 +215,19 @@
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
                 
-                // Try all available methods to detect DNSSEC
+                // First try dig command as it's most reliable
+                $dig_result = $this->checkDnssecUsingDig($domain);
+                if ($dig_result) {
+                    return [
+                        'status' => 'good',
+                        'message' => 'DNSSEC is enabled (detected via dig)',
+                        'detection_method' => 'dig'
+                    ];
+                }
+                
+                // Try PHP DNS methods as fallback
                 $methods = [
                     'DNS' => $this->checkDnssecUsingDNS($domain),
-                    'Headers' => $this->checkDnssecUsingHeaders($domain),
                     'TXT' => $this->checkDnssecUsingTXT($domain)
                 ];
                 
@@ -242,7 +249,7 @@
                         'status' => 'bad',
                         'message' => 'Domain exists but DNSSEC is not detected',
                         'debug_info' => [
-                            'methods_tried' => $methods,
+                            'methods_tried' => array_merge(['dig' => $dig_result], $methods),
                             'has_a_record' => true
                         ]
                     ];
@@ -252,7 +259,7 @@
                     'status' => 'error',
                     'message' => 'Could not determine DNSSEC status',
                     'debug_info' => [
-                        'methods_tried' => $methods,
+                        'methods_tried' => array_merge(['dig' => $dig_result], $methods),
                         'has_a_record' => false
                     ]
                 ];
