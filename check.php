@@ -121,19 +121,24 @@
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
                 
                 // Check for DNSKEY records
-                $dnskey_records = @dns_get_record($domain, DNS_DNSKEY);
-                $this->addDebug('DNSSEC', 'Found DNSKEY records', $dnskey_records);
+                $records = @dns_get_record($domain, DNS_ANY);
+                $this->addDebug('DNSSEC', 'Found records', $records);
+                
+                $dnskey_records = array_filter($records, function($record) {
+                    return isset($record['type']) && $record['type'] === 'DNSKEY';
+                });
                 
                 if (!empty($dnskey_records)) {
-                    // Check for DS records at parent zone
-                    $parent_domain = substr($domain, strpos($domain, '.') + 1);
-                    $ds_records = @dns_get_record($domain, DNS_DS);
-                    $this->addDebug('DNSSEC', 'Found DS records', $ds_records);
+                    // Check for DS records
+                    $ds_records = array_filter($records, function($record) {
+                        return isset($record['type']) && $record['type'] === 'DS';
+                    });
                     
                     if (!empty($ds_records)) {
                         // Check for RRSIG records
-                        $rrsig_records = @dns_get_record($domain, DNS_RRSIG);
-                        $this->addDebug('DNSSEC', 'Found RRSIG records', $rrsig_records);
+                        $rrsig_records = array_filter($records, function($record) {
+                            return isset($record['type']) && $record['type'] === 'RRSIG';
+                        });
                         
                         if (!empty($rrsig_records)) {
                             return [
@@ -150,7 +155,6 @@
                 }
                 
                 // Fallback check for RFC8482 HINFO records
-                $records = @dns_get_record($domain, DNS_ANY);
                 foreach ($records as $record) {
                     if (isset($record['type']) && $record['type'] === 'HINFO' && 
                         isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
@@ -192,9 +196,13 @@
                         foreach ($check_locations as $prefix) {
                             $check_domain = $prefix . $mx_host;
                             
-                            // Try to get TLSA records
-                            $tlsa_records = @dns_get_record($check_domain, DNS_TLSA);
-                            $this->addDebug('DANE', 'Checking TLSA records for ' . $check_domain, $tlsa_records);
+                            // Try to get TLSA records using DNS_ANY
+                            $records = @dns_get_record($check_domain, DNS_ANY);
+                            $this->addDebug('DANE', 'Checking records for ' . $check_domain, $records);
+                            
+                            $tlsa_records = array_filter($records, function($record) {
+                                return isset($record['type']) && $record['type'] === 'TLSA';
+                            });
                             
                             if (!empty($tlsa_records)) {
                                 return [
@@ -204,8 +212,7 @@
                                 ];
                             }
                             
-                            // Fallback to ANY record type for RFC8482 check
-                            $records = @dns_get_record($check_domain, DNS_ANY);
+                            // Fallback to RFC8482 HINFO check
                             foreach ($records as $record) {
                                 if (isset($record['type']) && $record['type'] === 'HINFO' &&
                                     isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
