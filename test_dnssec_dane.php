@@ -1,5 +1,7 @@
 <?php
 
+require_once 'netdns2-masterNet/DNS2.php';
+
 function queryDnsServer($domain, $type, $dnsServer) {
     $resolver = new Net_DNS2_Resolver([
         'nameservers' => [$dnsServer],
