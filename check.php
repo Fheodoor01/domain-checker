@@ -124,110 +124,130 @@
             return ['output' => $output, 'status' => $return_var];
         }
 
+        private function checkDnssecUsingDNS($domain) {
+            // First try to get the DNS resolver's capabilities
+            $resolver = @dns_get_record(".", DNS_NS);
+            if ($resolver === false) {
+                $this->addDebug('DNSSEC', 'Failed to query DNS resolver');
+                return false;
+            }
+            
+            // Try to get the DNSKEY record
+            $dnskey = @dns_get_record($domain, DNS_ANY);
+            $this->addDebug('DNSSEC', 'DNSKEY query result:', $dnskey);
+            
+            // Try to get the DS record from parent zone
+            $parent = substr($domain, strpos($domain, '.') + 1);
+            $ds = @dns_get_record($parent, DNS_ANY);
+            $this->addDebug('DNSSEC', 'DS query result:', $ds);
+            
+            // Check if we got any security-related records
+            foreach (array_merge($dnskey ?: [], $ds ?: []) as $record) {
+                if (isset($record['type']) && in_array($record['type'], ['DNSKEY', 'DS', 'RRSIG'])) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        private function checkDnssecUsingHeaders($domain) {
+            // Try to detect DNSSEC by checking DNS response headers
+            $header = @dns_get_record($domain, DNS_ANY, $authns, $addtl, true);
+            $this->addDebug('DNSSEC', 'DNS header info:', [
+                'header' => $header,
+                'authns' => $authns,
+                'addtl' => $addtl
+            ]);
+            
+            // Check additional records for DNSSEC indicators
+            if (!empty($addtl)) {
+                foreach ($addtl as $record) {
+                    if (isset($record['type']) && in_array($record['type'], ['DNSKEY', 'DS', 'RRSIG'])) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        private function checkDnssecUsingTXT($domain) {
+            // Some DNS servers store DNSSEC info in TXT records
+            $txt_records = @dns_get_record($domain, DNS_TXT);
+            $this->addDebug('DNSSEC', 'TXT records:', $txt_records);
+            
+            if (!empty($txt_records)) {
+                foreach ($txt_records as $record) {
+                    if (isset($record['txt'])) {
+                        $txt = strtolower($record['txt']);
+                        if (strpos($txt, 'dnssec') !== false || 
+                            strpos($txt, 'rrsig') !== false || 
+                            strpos($txt, 'dnskey') !== false) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        }
+
         private function checkDnssec($domain) {
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
                 
-                // Get all records and log them in detail
-                $records = @dns_get_record($domain, DNS_ALL);
-                if ($records === false) {
-                    $this->addDebug('DNSSEC', 'dns_get_record failed');
-                    $records = [];
-                }
+                // Try all available methods to detect DNSSEC
+                $methods = [
+                    'DNS' => $this->checkDnssecUsingDNS($domain),
+                    'Headers' => $this->checkDnssecUsingHeaders($domain),
+                    'TXT' => $this->checkDnssecUsingTXT($domain)
+                ];
                 
-                // Log each record type we find
-                foreach ($records as $record) {
-                    if (isset($record['type'])) {
-                        $this->addDebug('DNSSEC', 'Found record type: ' . $record['type'], $record);
-                    }
-                }
+                $this->addDebug('DNSSEC', 'Detection methods results:', $methods);
                 
-                // Try different record type combinations
-                $a_records = @dns_get_record($domain, DNS_A);
-                $this->addDebug('DNSSEC', 'A records:', $a_records);
-                
-                $any_records = @dns_get_record($domain, DNS_ANY);
-                $this->addDebug('DNSSEC', 'ANY records:', $any_records);
-                
-                $txt_records = @dns_get_record($domain, DNS_TXT);
-                $this->addDebug('DNSSEC', 'TXT records:', $txt_records);
-                
-                // Combine all records for checking
-                $all_records = array_merge(
-                    $records,
-                    $a_records ?: [],
-                    $any_records ?: [],
-                    $txt_records ?: []
-                );
-                
-                $has_rrsig = false;
-                $has_dnskey = false;
-                $dnssec_records = [];
-                
-                foreach ($all_records as $record) {
-                    if (!isset($record['type'])) continue;
-                    
-                    // Check for RRSIG in type field
-                    if ($record['type'] === 'RRSIG') {
-                        $has_rrsig = true;
-                        $dnssec_records[] = $record;
-                    }
-                    // Check for DNSKEY in type field
-                    else if ($record['type'] === 'DNSKEY') {
-                        $has_dnskey = true;
-                        $dnssec_records[] = $record;
-                    }
-                    // Also check if RRSIG appears in other fields (some PHP versions put it there)
-                    else if (isset($record['rrsig']) || 
-                            (isset($record['txt']) && strpos($record['txt'], 'RRSIG') !== false) ||
-                            (isset($record['entries']) && is_array($record['entries']) && 
-                             array_reduce($record['entries'], function($carry, $entry) {
-                                 return $carry || strpos($entry, 'RRSIG') !== false;
-                             }, false))) {
-                        $has_rrsig = true;
-                        $dnssec_records[] = $record;
-                    }
-                }
-                
-                $this->addDebug('DNSSEC', 'DNSSEC detection results:', [
-                    'has_rrsig' => $has_rrsig,
-                    'has_dnskey' => $has_dnskey,
-                    'dnssec_records' => $dnssec_records
-                ]);
-                
-                if ($has_rrsig) {
+                // If any method detected DNSSEC, consider it enabled
+                if (in_array(true, $methods, true)) {
                     return [
                         'status' => 'good',
-                        'message' => 'DNSSEC is enabled and working (RRSIG records found)',
-                        'records' => [
-                            'has_rrsig' => true,
-                            'has_dnskey' => $has_dnskey,
-                            'found_records' => $dnssec_records
-                        ]
+                        'message' => 'DNSSEC appears to be enabled',
+                        'detection_methods' => array_keys(array_filter($methods))
                     ];
                 }
                 
-                // Check for DNSKEY as a fallback
-                if ($has_dnskey) {
+                // Try one final check with ANY records
+                $any_records = @dns_get_record($domain, DNS_ANY);
+                $this->addDebug('DNSSEC', 'Final ANY records check:', $any_records);
+                
+                foreach ($any_records ?: [] as $record) {
+                    if (isset($record['type']) && in_array($record['type'], ['DNSKEY', 'DS', 'RRSIG'])) {
+                        return [
+                            'status' => 'good',
+                            'message' => 'DNSSEC is enabled (detected through DNS_ANY)',
+                            'record_type' => $record['type']
+                        ];
+                    }
+                }
+                
+                // Check if the domain exists but DNSSEC is not enabled
+                $a_record = @dns_get_record($domain, DNS_A);
+                if (!empty($a_record)) {
                     return [
-                        'status' => 'warning',
-                        'message' => 'DNSSEC appears to be partially configured (DNSKEY found but no RRSIG)',
-                        'records' => [
-                            'has_rrsig' => false,
-                            'has_dnskey' => true,
-                            'found_records' => $dnssec_records
+                        'status' => 'bad',
+                        'message' => 'Domain exists but DNSSEC is not detected',
+                        'debug_info' => [
+                            'methods_tried' => $methods,
+                            'has_a_record' => true
                         ]
                     ];
                 }
                 
                 return [
-                    'status' => 'bad', 
-                    'message' => 'DNSSEC not detected',
+                    'status' => 'error',
+                    'message' => 'Could not determine DNSSEC status',
                     'debug_info' => [
-                        'total_records_found' => count($all_records),
-                        'record_types_found' => array_unique(array_map(function($record) {
-                            return isset($record['type']) ? $record['type'] : 'unknown';
-                        }, $all_records))
+                        'methods_tried' => $methods,
+                        'has_a_record' => false
                     ]
                 ];
             } catch (Exception $e) {
