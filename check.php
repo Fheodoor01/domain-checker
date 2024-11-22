@@ -116,42 +116,44 @@
             }
         }
 
-        private function checkDnssecUsingDNS($domain) {
+        private function checkDnssec($domain) {
             try {
-                // Try multiple record types that might have DNSSEC data
-                $record_types = [
-                    DNS_ANY,    // Try ANY first
-                    DNS_SOA,    // SOA might have DNSSEC info
-                    DNS_NS,     // NS servers might have DNSSEC info
-                    DNS_MX      // MX might have DNSSEC info
+                $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
+                
+                // Try different record types that might return RRSIG
+                $types = [
+                    DNS_A => 'A',
+                    DNS_AAAA => 'AAAA',
+                    DNS_NS => 'NS',
+                    DNS_MX => 'MX',
+                    DNS_SOA => 'SOA',
+                    DNS_TXT => 'TXT',
+                    DNS_ANY => 'ANY'
                 ];
                 
-                foreach ($record_types as $type) {
-                    $records = @dns_get_record($domain, $type);
-                    $this->addDebug('DNSSEC', "DNS query result for type $type:", $records);
+                foreach ($types as $type_const => $type_name) {
+                    $records = @dns_get_record($domain, $type_const);
+                    $this->addDebug('DNSSEC', "Checking records for type $type_name:", $records);
                     
                     if (!empty($records)) {
                         foreach ($records as $record) {
-                            // Check for direct DNSSEC records
-                            if (isset($record['type']) && in_array($record['type'], ['DNSKEY', 'DS', 'RRSIG'])) {
+                            // Look for RRSIG in type field
+                            if (isset($record['type']) && $record['type'] === 'RRSIG') {
                                 return [
-                                    'found' => true,
-                                    'method' => 'direct',
-                                    'record_type' => $record['type']
+                                    'status' => 'good',
+                                    'message' => 'DNSSEC is enabled (RRSIG record found)',
+                                    'record_type' => $type_name
                                 ];
                             }
                             
-                            // Check for RRSIG in other fields
+                            // Some PHP versions might include RRSIG in other fields
                             foreach ($record as $key => $value) {
-                                if (is_string($value) && 
-                                    (stripos($value, 'RRSIG') !== false || 
-                                     stripos($value, 'DNSKEY') !== false || 
-                                     stripos($value, 'DNSSEC') !== false)) {
+                                if (is_string($value) && stripos($value, 'RRSIG') !== false) {
                                     return [
-                                        'found' => true,
-                                        'method' => 'field_content',
-                                        'field' => $key,
-                                        'value' => $value
+                                        'status' => 'good',
+                                        'message' => 'DNSSEC is enabled (RRSIG found in record)',
+                                        'record_type' => $type_name,
+                                        'field' => $key
                                     ];
                                 }
                             }
@@ -159,94 +161,13 @@
                     }
                 }
                 
-                // Try parent domain for DS records
-                $parent = substr($domain, strpos($domain, '.') + 1);
-                if ($parent !== false && strlen($parent) > 0) {
-                    $parent_records = @dns_get_record($parent, DNS_ANY);
-                    $this->addDebug('DNSSEC', 'Parent domain records:', $parent_records);
-                    
-                    if (!empty($parent_records)) {
-                        foreach ($parent_records as $record) {
-                            if (isset($record['type']) && $record['type'] === 'DS') {
-                                return [
-                                    'found' => true,
-                                    'method' => 'parent_ds',
-                                    'parent' => $parent
-                                ];
-                            }
-                        }
-                    }
-                }
-                
-                return ['found' => false];
-            } catch (Exception $e) {
-                $this->addDebug('DNSSEC', 'DNS check error: ' . $e->getMessage());
-                return ['found' => false, 'error' => $e->getMessage()];
-            }
-        }
-
-        private function checkDnssecUsingTXT($domain) {
-            try {
-                $txt_records = @dns_get_record($domain, DNS_TXT);
-                $this->addDebug('DNSSEC', 'TXT records:', $txt_records);
-                
-                if (!empty($txt_records)) {
-                    foreach ($txt_records as $record) {
-                        if (isset($record['txt'])) {
-                            $txt = strtolower($record['txt']);
-                            if (strpos($txt, 'dnssec') !== false || 
-                                strpos($txt, 'rrsig') !== false || 
-                                strpos($txt, 'dnskey') !== false) {
-                                return [
-                                    'found' => true,
-                                    'method' => 'txt',
-                                    'content' => $txt
-                                ];
-                            }
-                        }
-                    }
-                }
-                
-                return ['found' => false];
-            } catch (Exception $e) {
-                $this->addDebug('DNSSEC', 'TXT check error: ' . $e->getMessage());
-                return ['found' => false, 'error' => $e->getMessage()];
-            }
-        }
-
-        private function checkDnssec($domain) {
-            try {
-                $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
-                
-                // Try DNS method first
-                $dns_result = $this->checkDnssecUsingDNS($domain);
-                if ($dns_result['found']) {
-                    return [
-                        'status' => 'good',
-                        'message' => 'DNSSEC is enabled',
-                        'details' => $dns_result
-                    ];
-                }
-                
-                // Try TXT method as fallback
-                $txt_result = $this->checkDnssecUsingTXT($domain);
-                if ($txt_result['found']) {
-                    return [
-                        'status' => 'good',
-                        'message' => 'DNSSEC appears to be enabled (found in TXT record)',
-                        'details' => $txt_result
-                    ];
-                }
-                
-                // Check if domain exists
+                // Check if the domain exists
                 $a_record = @dns_get_record($domain, DNS_A);
                 if (!empty($a_record)) {
                     return [
                         'status' => 'bad',
-                        'message' => 'Domain exists but DNSSEC is not detected',
+                        'message' => 'Domain exists but no RRSIG records found',
                         'debug_info' => [
-                            'dns_result' => $dns_result,
-                            'txt_result' => $txt_result,
                             'has_a_record' => true
                         ]
                     ];
@@ -256,8 +177,6 @@
                     'status' => 'error',
                     'message' => 'Could not determine DNSSEC status',
                     'debug_info' => [
-                        'dns_result' => $dns_result,
-                        'txt_result' => $txt_result,
                         'has_a_record' => false
                     ]
                 ];
