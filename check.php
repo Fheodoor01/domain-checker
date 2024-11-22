@@ -119,60 +119,50 @@
         private function checkDnssec($domain) {
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
-
-                // Check for RFC8482 HINFO records
-                $records = @dns_get_record($domain, DNS_ANY);
-                $this->addDebug('DNSSEC', 'Checking for RFC8482 indicators', $records);
                 
+                // Check for DNSKEY records
+                $dnskey_records = @dns_get_record($domain, DNS_DNSKEY);
+                $this->addDebug('DNSSEC', 'Found DNSKEY records', $dnskey_records);
+                
+                if (!empty($dnskey_records)) {
+                    // Check for DS records at parent zone
+                    $parent_domain = substr($domain, strpos($domain, '.') + 1);
+                    $ds_records = @dns_get_record($domain, DNS_DS);
+                    $this->addDebug('DNSSEC', 'Found DS records', $ds_records);
+                    
+                    if (!empty($ds_records)) {
+                        // Check for RRSIG records
+                        $rrsig_records = @dns_get_record($domain, DNS_RRSIG);
+                        $this->addDebug('DNSSEC', 'Found RRSIG records', $rrsig_records);
+                        
+                        if (!empty($rrsig_records)) {
+                            return [
+                                'status' => 'good',
+                                'message' => 'DNSSEC is properly configured with DNSKEY, DS, and RRSIG records',
+                                'records' => [
+                                    'dnskey' => $dnskey_records,
+                                    'ds' => $ds_records,
+                                    'rrsig' => $rrsig_records
+                                ]
+                            ];
+                        }
+                    }
+                }
+                
+                // Fallback check for RFC8482 HINFO records
+                $records = @dns_get_record($domain, DNS_ANY);
                 foreach ($records as $record) {
                     if (isset($record['type']) && $record['type'] === 'HINFO' && 
                         isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
-                        // RFC8482 indicates DNSSEC might be enabled
                         return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC appears to be enabled (RFC8482 indicator)',
+                            'status' => 'warning',
+                            'message' => 'DNSSEC might be enabled (RFC8482 indicator found), but specific records could not be verified',
                             'record' => 'Found RFC8482 indicator'
                         ];
                     }
                 }
-
-                // Check for DNSKEY records
-                $dnskey_records = @dns_get_record($domain, DNS_ANY);
-                foreach ($dnskey_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'DNSKEY') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled (DNSKEY found)',
-                            'record' => 'Found DNSKEY record'
-                        ];
-                    }
-                }
-
-                // Check for DS records
-                $ds_records = @dns_get_record($domain, DNS_ANY);
-                foreach ($ds_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'DS') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled (DS record found)',
-                            'record' => 'Found DS record'
-                        ];
-                    }
-                }
-
-                // Check for RRSIG records
-                $rrsig_records = @dns_get_record($domain, DNS_ANY);
-                foreach ($rrsig_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'RRSIG') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled (RRSIG found)',
-                            'record' => 'Found RRSIG record'
-                        ];
-                    }
-                }
-
-                return ['status' => 'bad', 'message' => 'DNSSEC not detected'];
+                
+                return ['status' => 'bad', 'message' => 'DNSSEC not detected or not properly configured'];
             } catch (Exception $e) {
                 $this->addDebug('DNSSEC', 'Error: ' . $e->getMessage());
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
@@ -192,7 +182,7 @@
                         $mx_host = rtrim($mx['target'], '.');
                         $this->addDebug('DANE', 'Checking MX host: ' . $mx_host);
 
-                        // Check for RFC8482 HINFO records which might indicate DANE
+                        // Check for TLSA records at standard ports
                         $check_locations = [
                             '_25._tcp.',
                             '_465._tcp.',
@@ -201,36 +191,32 @@
 
                         foreach ($check_locations as $prefix) {
                             $check_domain = $prefix . $mx_host;
+                            
+                            // Try to get TLSA records
+                            $tlsa_records = @dns_get_record($check_domain, DNS_TLSA);
+                            $this->addDebug('DANE', 'Checking TLSA records for ' . $check_domain, $tlsa_records);
+                            
+                            if (!empty($tlsa_records)) {
+                                return [
+                                    'status' => 'good',
+                                    'message' => 'DANE is properly configured with TLSA records for ' . $mx_host,
+                                    'records' => $tlsa_records
+                                ];
+                            }
+                            
+                            // Fallback to ANY record type for RFC8482 check
                             $records = @dns_get_record($check_domain, DNS_ANY);
-                            $this->addDebug('DANE', 'Checking records for ' . $check_domain, $records);
-
                             foreach ($records as $record) {
                                 if (isset($record['type']) && $record['type'] === 'HINFO' &&
                                     isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
                                     return [
-                                        'status' => 'good',
-                                        'message' => 'DANE appears to be enabled for ' . $mx_host,
+                                        'status' => 'warning',
+                                        'message' => 'DANE might be enabled for ' . $mx_host . ' (RFC8482 indicator found)',
                                         'record' => 'Found RFC8482 indicator for TLSA records'
                                     ];
                                 }
                             }
                         }
-                    }
-                }
-
-                // Check the domain itself
-                $check_domain = '_25._tcp.' . $domain;
-                $records = @dns_get_record($check_domain, DNS_ANY);
-                $this->addDebug('DANE', 'Checking domain records', $records);
-
-                foreach ($records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'HINFO' &&
-                        isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DANE appears to be enabled for domain',
-                            'record' => 'Found RFC8482 indicator for TLSA records'
-                        ];
                     }
                 }
 
