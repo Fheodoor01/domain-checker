@@ -120,7 +120,7 @@
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
                 
-                // Try different record types that might return RRSIG
+                // Focus on detecting RRSIG records
                 $types = [
                     DNS_A => 'A',
                     DNS_AAAA => 'AAAA',
@@ -189,74 +189,36 @@
         private function checkDane($domain) {
             try {
                 $this->addDebug('DANE', 'Starting DANE check for: ' . $domain);
-
-                // First check if DNSSEC is enabled (required for DANE)
-                $dnssec_result = $this->checkDnssec($domain);
-                if ($dnssec_result['status'] !== 'good') {
+                
+                // Ensure DNSSEC is valid before checking DANE
+                $dnssec_status = $this->checkDnssec($domain);
+                if ($dnssec_status['status'] !== 'good') {
                     return [
                         'status' => 'bad',
-                        'message' => 'DANE requires valid DNSSEC configuration',
-                        'dnssec_status' => $dnssec_result
+                        'message' => 'DANE check failed because DNSSEC is not valid'
                     ];
                 }
-
-                // Get MX records
-                $mx_records = dns_get_record($domain, DNS_MX);
-                $this->addDebug('DANE', 'Found MX records', $mx_records);
-
-                if (!empty($mx_records)) {
-                    foreach ($mx_records as $mx) {
-                        $mx_host = rtrim($mx['target'], '.');
-                        $this->addDebug('DANE', 'Checking MX host: ' . $mx_host);
-
-                        // Check standard SMTP ports for TLSA records
-                        $check_locations = [
-                            '_25._tcp.',
-                            '_465._tcp.',
-                            '_587._tcp.'
+                
+                // Check for TLSA records on common mail ports
+                $ports = [25, 465, 587];
+                foreach ($ports as $port) {
+                    $tlsa_domain = sprintf('_%d._tcp.%s', $port, $domain);
+                    $tlsa_records = @dns_get_record($tlsa_domain, DNS_TLSA);
+                    $this->addDebug('DANE', "Checking TLSA records for $tlsa_domain:", $tlsa_records);
+                    
+                    if (!empty($tlsa_records)) {
+                        return [
+                            'status' => 'good',
+                            'message' => 'DANE is enabled (TLSA record found)',
+                            'port' => $port
                         ];
-
-                        foreach ($check_locations as $prefix) {
-                            $check_domain = $prefix . $mx_host;
-                            
-                            // Get all records
-                            $records = @dns_get_record($check_domain, DNS_ANY);
-                            $this->addDebug('DANE', 'Checking records for ' . $check_domain, $records);
-                            
-                            foreach ($records as $record) {
-                                if (isset($record['type'])) {
-                                    // Check for TLSA records
-                                    if ($record['type'] === 'TLSA') {
-                                        return [
-                                            'status' => 'good',
-                                            'message' => 'DANE is configured with TLSA records for ' . $mx_host,
-                                            'records' => [
-                                                'tlsa' => $record,
-                                                'port' => str_replace(['_', '._tcp.'], '', $prefix)
-                                            ]
-                                        ];
-                                    }
-                                    
-                                    // Also check TXT records for TLSA data
-                                    if ($record['type'] === 'TXT' && 
-                                        isset($record['txt']) && 
-                                        strpos($record['txt'], 'TLSA') !== false) {
-                                        return [
-                                            'status' => 'warning',
-                                            'message' => 'Possible DANE configuration found in TXT record for ' . $mx_host,
-                                            'records' => [
-                                                'txt' => $record,
-                                                'port' => str_replace(['_', '._tcp.'], '', $prefix)
-                                            ]
-                                        ];
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
-
-                return ['status' => 'bad', 'message' => 'No DANE records found'];
+                
+                return [
+                    'status' => 'bad',
+                    'message' => 'No TLSA records found, DANE is not enabled'
+                ];
             } catch (Exception $e) {
                 $this->addDebug('DANE', 'Error: ' . $e->getMessage());
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
