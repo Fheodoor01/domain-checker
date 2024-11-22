@@ -120,65 +120,27 @@
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
                 
-                // Focus on detecting RRSIG records
-                $types = [
-                    DNS_A => 'A',
-                    DNS_AAAA => 'AAAA',
-                    DNS_NS => 'NS',
-                    DNS_MX => 'MX',
-                    DNS_SOA => 'SOA',
-                    DNS_TXT => 'TXT',
-                    DNS_ANY => 'ANY'
-                ];
-                
-                foreach ($types as $type_const => $type_name) {
-                    $records = @dns_get_record($domain, $type_const);
-                    $this->addDebug('DNSSEC', "Checking records for type $type_name:", $records);
-                    
-                    if (!empty($records)) {
-                        foreach ($records as $record) {
-                            // Look for RRSIG in type field
-                            if (isset($record['type']) && $record['type'] === 'RRSIG') {
-                                return [
-                                    'status' => 'good',
-                                    'message' => 'DNSSEC is enabled (RRSIG record found)',
-                                    'record_type' => $type_name
-                                ];
-                            }
-                            
-                            // Some PHP versions might include RRSIG in other fields
-                            foreach ($record as $key => $value) {
-                                if (is_string($value) && stripos($value, 'RRSIG') !== false) {
-                                    return [
-                                        'status' => 'good',
-                                        'message' => 'DNSSEC is enabled (RRSIG found in record)',
-                                        'record_type' => $type_name,
-                                        'field' => $key
-                                    ];
-                                }
-                            }
-                        }
+                // Use the validateDomain function
+                require_once('validate.php');
+                try {
+                    $result = validateDomain($domain);
+                    if ($result === true) {
+                        return [
+                            'status' => 'good',
+                            'message' => 'DNSSEC is properly configured and valid'
+                        ];
                     }
-                }
-                
-                // Check if the domain exists
-                $a_record = @dns_get_record($domain, DNS_A);
-                if (!empty($a_record)) {
+                } catch (Metaregistrar\DNS\dnsException $e) {
+                    $this->addDebug('DNSSEC', 'DNSSEC validation error: ' . $e->getMessage());
                     return [
                         'status' => 'bad',
-                        'message' => 'Domain exists but no RRSIG records found',
-                        'debug_info' => [
-                            'has_a_record' => true
-                        ]
+                        'message' => 'DNSSEC validation failed: ' . $e->getMessage()
                     ];
                 }
                 
                 return [
-                    'status' => 'error',
-                    'message' => 'Could not determine DNSSEC status',
-                    'debug_info' => [
-                        'has_a_record' => false
-                    ]
+                    'status' => 'bad',
+                    'message' => 'DNSSEC is not properly configured'
                 ];
             } catch (Exception $e) {
                 $this->addDebug('DNSSEC', 'Error: ' . $e->getMessage());
