@@ -128,48 +128,74 @@
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
                 
-                // Check DNSSEC using dig
-                $dig_result = $this->executeDig($domain, '+dnssec');
-                $this->addDebug('DNSSEC', 'Dig command output', $dig_result);
+                // Get all DNS records
+                $records = @dns_get_record($domain, DNS_ANY);
+                $this->addDebug('DNSSEC', 'Found DNS records', $records);
                 
-                if ($dig_result['status'] === 0) {
-                    $output = implode("\n", $dig_result['output']);
+                $dnssec_records = [
+                    'dnskey' => [],
+                    'ds' => [],
+                    'rrsig' => [],
+                    'nsec' => [],
+                    'nsec3' => []
+                ];
+                
+                // Categorize records
+                foreach ($records as $record) {
+                    if (!isset($record['type'])) continue;
                     
-                    // Check for RRSIG records
-                    if (strpos($output, 'RRSIG') !== false) {
-                        // Verify DNSKEY
-                        $dnskey_result = $this->executeDig($domain, '+dnssec +noquestion +nocomments +nostat +noanswer +nottl +notabd +noauthority +noadditional +multiline +all DNSKEY');
-                        $this->addDebug('DNSSEC', 'DNSKEY check output', $dnskey_result);
-                        
-                        if (strpos(implode("\n", $dnskey_result['output']), 'DNSKEY') !== false) {
-                            // Check DS record
-                            $ds_result = $this->executeDig($domain, '+dnssec +noquestion +nocomments +nostat +noanswer +nottl +notabd +noauthority +noadditional +multiline +all DS');
-                            $this->addDebug('DNSSEC', 'DS check output', $ds_result);
-                            
-                            if (strpos(implode("\n", $ds_result['output']), 'DS') !== false) {
-                                return [
-                                    'status' => 'good',
-                                    'message' => 'DNSSEC is properly configured and validated',
-                                    'records' => [
-                                        'dig_output' => $output,
-                                        'has_rrsig' => true,
-                                        'has_dnskey' => true,
-                                        'has_ds' => true
-                                    ]
-                                ];
-                            }
+                    switch ($record['type']) {
+                        case 'DNSKEY':
+                            $dnssec_records['dnskey'][] = $record;
+                            break;
+                        case 'DS':
+                            $dnssec_records['ds'][] = $record;
+                            break;
+                        case 'RRSIG':
+                            $dnssec_records['rrsig'][] = $record;
+                            break;
+                        case 'NSEC':
+                            $dnssec_records['nsec'][] = $record;
+                            break;
+                        case 'NSEC3':
+                            $dnssec_records['nsec3'][] = $record;
+                            break;
+                    }
+                }
+                
+                // Check parent domain for DS records if not found
+                if (empty($dnssec_records['ds']) && strpos($domain, '.') !== false) {
+                    $parent = substr($domain, strpos($domain, '.') + 1);
+                    $parent_records = @dns_get_record($domain, DNS_ANY);
+                    foreach ($parent_records as $record) {
+                        if (isset($record['type']) && $record['type'] === 'DS') {
+                            $dnssec_records['ds'][] = $record;
                         }
                     }
                 }
                 
-                // Check if DNSSEC is enabled but not properly configured
-                $check_enabled = $this->executeDig($domain, '+cd +dnssec');
-                $enabled_output = implode("\n", $check_enabled['output']);
-                if (strpos($enabled_output, 'RRSIG') !== false || strpos($enabled_output, 'DNSKEY') !== false) {
+                $this->addDebug('DNSSEC', 'Categorized DNSSEC records', $dnssec_records);
+                
+                // Evaluate DNSSEC status
+                if (!empty($dnssec_records['dnskey']) && !empty($dnssec_records['rrsig'])) {
+                    if (!empty($dnssec_records['ds'])) {
+                        return [
+                            'status' => 'good',
+                            'message' => 'DNSSEC is properly configured with DNSKEY, DS, and RRSIG records',
+                            'records' => $dnssec_records
+                        ];
+                    } else {
+                        return [
+                            'status' => 'warning',
+                            'message' => 'DNSSEC partially configured (missing DS records)',
+                            'records' => $dnssec_records
+                        ];
+                    }
+                } else if (!empty($dnssec_records['dnskey']) || !empty($dnssec_records['rrsig']) || !empty($dnssec_records['ds'])) {
                     return [
                         'status' => 'warning',
-                        'message' => 'DNSSEC appears to be enabled but might not be properly configured',
-                        'records' => ['dig_output' => $enabled_output]
+                        'message' => 'DNSSEC appears to be partially configured',
+                        'records' => $dnssec_records
                     ];
                 }
                 
@@ -184,7 +210,17 @@
             try {
                 $this->addDebug('DANE', 'Starting DANE check for: ' . $domain);
 
-                // Get MX records first
+                // First check if DNSSEC is enabled (required for DANE)
+                $dnssec_result = $this->checkDnssec($domain);
+                if ($dnssec_result['status'] !== 'good') {
+                    return [
+                        'status' => 'bad',
+                        'message' => 'DANE requires valid DNSSEC configuration',
+                        'dnssec_status' => $dnssec_result
+                    ];
+                }
+
+                // Get MX records
                 $mx_records = dns_get_record($domain, DNS_MX);
                 $this->addDebug('DANE', 'Found MX records', $mx_records);
 
@@ -193,7 +229,7 @@
                         $mx_host = rtrim($mx['target'], '.');
                         $this->addDebug('DANE', 'Checking MX host: ' . $mx_host);
 
-                        // Check for TLSA records at standard ports
+                        // Check standard SMTP ports for TLSA records
                         $check_locations = [
                             '_25._tcp.',
                             '_465._tcp.',
@@ -202,33 +238,44 @@
 
                         foreach ($check_locations as $prefix) {
                             $check_domain = $prefix . $mx_host;
+                            $records = @dns_get_record($check_domain, DNS_ANY);
+                            $this->addDebug('DANE', 'Checking records for ' . $check_domain, $records);
                             
-                            // Use dig to check for TLSA records
-                            $dig_result = $this->executeDig($check_domain, '+dnssec TLSA');
-                            $this->addDebug('DANE', 'Dig TLSA check output for ' . $check_domain, $dig_result);
+                            $tlsa_records = [];
+                            foreach ($records as $record) {
+                                if (isset($record['type']) && $record['type'] === 'TLSA') {
+                                    $tlsa_records[] = $record;
+                                }
+                            }
                             
-                            $output = implode("\n", $dig_result['output']);
-                            if (strpos($output, 'TLSA') !== false) {
-                                // Verify DNSSEC for DANE
-                                $dnssec_result = $this->executeDig($check_domain, '+dnssec');
-                                $dnssec_output = implode("\n", $dnssec_result['output']);
+                            if (!empty($tlsa_records)) {
+                                // Check for RRSIG records to verify DNSSEC protection
+                                $has_rrsig = false;
+                                foreach ($records as $record) {
+                                    if (isset($record['type']) && $record['type'] === 'RRSIG') {
+                                        $has_rrsig = true;
+                                        break;
+                                    }
+                                }
                                 
-                                if (strpos($dnssec_output, 'RRSIG') !== false) {
+                                if ($has_rrsig) {
                                     return [
                                         'status' => 'good',
                                         'message' => 'DANE is properly configured with DNSSEC-secured TLSA records for ' . $mx_host,
                                         'records' => [
-                                            'dig_output' => $output,
-                                            'dnssec_validated' => true
+                                            'tlsa' => $tlsa_records,
+                                            'dnssec_secured' => true,
+                                            'port' => str_replace(['_', '._tcp.'], '', $prefix)
                                         ]
                                     ];
                                 } else {
                                     return [
                                         'status' => 'warning',
-                                        'message' => 'TLSA records found for ' . $mx_host . ' but DNSSEC validation failed',
+                                        'message' => 'TLSA records found but not properly secured with DNSSEC for ' . $mx_host,
                                         'records' => [
-                                            'dig_output' => $output,
-                                            'dnssec_validated' => false
+                                            'tlsa' => $tlsa_records,
+                                            'dnssec_secured' => false,
+                                            'port' => str_replace(['_', '._tcp.'], '', $prefix)
                                         ]
                                     ];
                                 }
