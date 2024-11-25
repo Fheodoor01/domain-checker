@@ -231,6 +231,12 @@
                         loadingAnimation.style.display = 'flex';
                     }
                 });
+
+                // Start animation if results are present on page load
+                const scoreDisplay = document.querySelector('.grid');
+                if (scoreDisplay) {
+                    setTimeout(animateScore, 100);
+                }
             });
         </script>
         <link rel="stylesheet" href="assets/css/styles.css">
