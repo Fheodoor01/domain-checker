@@ -21,14 +21,26 @@
             try {
                 $checker = new \DomainChecker\DomainChecker($config);
                 $results = $checker->checkAll($domain);
-                if ($results === false) {
-                    $error = 'Domain is not valid. Please check your input and try again.';
+                
+                if ($results === false || (is_array($results) && empty($results))) {
+                    echo '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">';
+                    echo '<strong class="font-bold">Error: </strong>';
+                    echo '<span class="block sm:inline">Domain is not valid. Please check your input and try again.</span>';
+                    echo '</div>';
+                    $results = null;
                 }
             } catch (Exception $e) {
-                $error = $e->getMessage();
+                echo '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">';
+                echo '<strong class="font-bold">Error: </strong>';
+                echo '<span class="block sm:inline">Domain is not valid. Please check your input and try again.</span>';
+                echo '</div>';
+                $results = null;
             }
         } else {
-            $error = 'Please enter a domain';
+            echo '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">';
+            echo '<strong class="font-bold">Error: </strong>';
+            echo '<span class="block sm:inline">Please enter a domain.</span>';
+            echo '</div>';
         }
     }
 
@@ -343,8 +355,9 @@
 
                 <?php if ($results): ?>
                     <?php if (is_string($results)): ?>
-                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-                            <strong class="font-bold"><?php echo $results; ?></strong>
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                            <strong class="font-bold">Error: </strong>
+                            <span class="block sm:inline">Domain is not valid. Please check your input and try again.</span>
                         </div>
                     <?php else: ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
