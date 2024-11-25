@@ -1,4 +1,9 @@
 <?php
+
+namespace DomainChecker;
+
+require_once __DIR__ . '/src/Security.php';
+
     class DomainChecker {
         private $config;
         private $debug = [];
@@ -405,5 +410,4 @@
             }
         }
     }
-    require_once __DIR__ . '/src/Security.php';
     ?>
