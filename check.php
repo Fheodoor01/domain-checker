@@ -168,7 +168,8 @@
                     
                     // Use dig command for TLSA lookup since DNS_TLSA constant might not be available
                     $command = sprintf('dig +short TYPE52 %s', escapeshellarg($tlsa_domain));
-                    $output = trim(shell_exec($command));
+                    $output = shell_exec($command);
+                    $output = ($output === null) ? '' : trim($output);
                     
                     $this->addDebug('DANE', "Checking TLSA records for $tlsa_domain:", $output);
                     
