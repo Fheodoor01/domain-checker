@@ -1,4 +1,9 @@
 <?php
+
+namespace DomainChecker;
+
+require_once __DIR__ . '/src/Security.php';
+
     class DomainChecker {
         private $config;
         private $debug = [];
@@ -9,6 +14,15 @@
         
         public function checkAll($domain) {
             $this->debug = []; // Reset debug info
+            
+            // Check nameservers first
+            $command = sprintf('dig +short NS %s', escapeshellarg($domain));
+            $output = Security::safeExecute('dig', ['+short', 'NS', $domain])['output'];
+            
+            if (empty(trim($output ?? ''))) {
+                // No nameservers found, domain likely doesn't exist
+                return 'Error: Domain does not exist';
+            }
             
             $results = [
                 'nameservers' => $this->checkNameservers($domain),
@@ -25,7 +39,6 @@
 
             $score = $this->calculateScore($results);
             $results['overall_score'] = $score;
-            $results['debug'] = $this->debug;
 
             return $results;
         }
@@ -119,60 +132,29 @@
         private function checkDnssec($domain) {
             try {
                 $this->addDebug('DNSSEC', 'Starting DNSSEC check for: ' . $domain);
-
-                // Check for RFC8482 HINFO records
-                $records = @dns_get_record($domain, DNS_ANY);
-                $this->addDebug('DNSSEC', 'Checking for RFC8482 indicators', $records);
                 
-                foreach ($records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'HINFO' && 
-                        isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
-                        // RFC8482 indicates DNSSEC might be enabled
+                // Use the validateDomain function
+                require_once('validate.php');
+                try {
+                    $result = validateDomain($domain);
+                    if ($result === true) {
                         return [
                             'status' => 'good',
-                            'message' => 'DNSSEC appears to be enabled (RFC8482 indicator)',
-                            'record' => 'Found RFC8482 indicator'
+                            'message' => 'DNSSEC is properly configured and valid'
                         ];
                     }
+                } catch (Metaregistrar\DNS\dnsException $e) {
+                    $this->addDebug('DNSSEC', 'DNSSEC validation error: ' . $e->getMessage());
+                    return [
+                        'status' => 'bad',
+                        'message' => 'DNSSEC validation failed: ' . $e->getMessage()
+                    ];
                 }
-
-                // Check for DNSKEY records
-                $dnskey_records = @dns_get_record($domain, DNS_ANY);
-                foreach ($dnskey_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'DNSKEY') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled (DNSKEY found)',
-                            'record' => 'Found DNSKEY record'
-                        ];
-                    }
-                }
-
-                // Check for DS records
-                $ds_records = @dns_get_record($domain, DNS_ANY);
-                foreach ($ds_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'DS') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled (DS record found)',
-                            'record' => 'Found DS record'
-                        ];
-                    }
-                }
-
-                // Check for RRSIG records
-                $rrsig_records = @dns_get_record($domain, DNS_ANY);
-                foreach ($rrsig_records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'RRSIG') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DNSSEC is enabled (RRSIG found)',
-                            'record' => 'Found RRSIG record'
-                        ];
-                    }
-                }
-
-                return ['status' => 'bad', 'message' => 'DNSSEC not detected'];
+                
+                return [
+                    'status' => 'bad',
+                    'message' => 'DNSSEC is not properly configured'
+                ];
             } catch (Exception $e) {
                 $this->addDebug('DNSSEC', 'Error: ' . $e->getMessage());
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
@@ -182,59 +164,93 @@
         private function checkDane($domain) {
             try {
                 $this->addDebug('DANE', 'Starting DANE check for: ' . $domain);
-
-                // Get MX records first
-                $mx_records = dns_get_record($domain, DNS_MX);
-                $this->addDebug('DANE', 'Found MX records', $mx_records);
-
-                if (!empty($mx_records)) {
-                    foreach ($mx_records as $mx) {
-                        $mx_host = rtrim($mx['target'], '.');
-                        $this->addDebug('DANE', 'Checking MX host: ' . $mx_host);
-
-                        // Check for RFC8482 HINFO records which might indicate DANE
-                        $check_locations = [
-                            '_25._tcp.',
-                            '_465._tcp.',
-                            '_587._tcp.'
-                        ];
-
-                        foreach ($check_locations as $prefix) {
-                            $check_domain = $prefix . $mx_host;
-                            $records = @dns_get_record($check_domain, DNS_ANY);
-                            $this->addDebug('DANE', 'Checking records for ' . $check_domain, $records);
-
-                            foreach ($records as $record) {
-                                if (isset($record['type']) && $record['type'] === 'HINFO' &&
-                                    isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
+                
+                // Ensure DNSSEC is valid before checking DANE
+                $dnssec_status = $this->checkDnssec($domain);
+                if ($dnssec_status['status'] !== 'good') {
+                    return [
+                        'status' => 'bad',
+                        'message' => 'DANE check failed because DNSSEC is not valid'
+                    ];
+                }
+                
+                // First get MX records
+                $command = sprintf('dig +short MX %s', escapeshellarg($domain));
+                $mx_output = Security::safeExecute('dig', ['+short', 'MX', $domain])['output'];
+                
+                if (empty(trim($mx_output ?? ''))) {
+                    return [
+                        'status' => 'bad',
+                        'message' => 'No MX records found'
+                    ];
+                }
+                
+                // Parse MX records
+                $mx_records = array_filter(explode("\n", trim($mx_output)));
+                $ports = [25, 465, 587]; // Common SMTP ports
+                
+                foreach ($mx_records as $mx_record) {
+                    // MX record format: priority hostname
+                    if (preg_match('/^\d+\s+(.+?)\.?$/', trim($mx_record), $matches)) {
+                        $mx_host = rtrim($matches[1], '.');
+                        
+                        foreach ($ports as $port) {
+                            // Check for TLSA records for each port
+                            $tlsa_domain = sprintf('_%d._tcp.%s', $port, $mx_host);
+                            // Use dig without +short to get full output including RRSIG
+                            $command = sprintf('dig +dnssec TLSA %s', escapeshellarg($tlsa_domain));
+                            $output = Security::safeExecute('dig', ['+dnssec', 'TLSA', $tlsa_domain])['output'];
+                            
+                            if (!empty($output)) {
+                                $has_valid_tlsa = false;
+                                $has_rrsig = false;
+                                $valid_records = [];
+                                
+                                // Parse the dig output
+                                $lines = explode("\n", $output);
+                                foreach ($lines as $line) {
+                                    // Check for TLSA records
+                                    if (strpos($line, 'TLSA') !== false && strpos($line, 'RRSIG') === false) {
+                                        // Extract just the TLSA data
+                                        if (preg_match('/TLSA\s+(\d+)\s+(\d+)\s+(\d+)\s+([A-F0-9]+)/i', $line, $matches)) {
+                                            $usage = (int)$matches[1];
+                                            $selector = (int)$matches[2];
+                                            $matching_type = (int)$matches[3];
+                                            
+                                            // Validate TLSA record format
+                                            if (($usage >= 0 && $usage <= 3) && 
+                                                ($selector >= 0 && $selector <= 1) && 
+                                                ($matching_type >= 0 && $matching_type <= 2)) {
+                                                $has_valid_tlsa = true;
+                                                $valid_records[] = sprintf("%d %d %d %s", $usage, $selector, $matching_type, $matches[4]);
+                                            }
+                                        }
+                                    }
+                                    // Check for RRSIG record
+                                    if (strpos($line, 'RRSIG') !== false && strpos($line, 'TLSA') !== false) {
+                                        $has_rrsig = true;
+                                    }
+                                }
+                                
+                                // Only consider DANE valid if we have both TLSA and RRSIG
+                                if ($has_valid_tlsa && $has_rrsig) {
                                     return [
                                         'status' => 'good',
-                                        'message' => 'DANE appears to be enabled for ' . $mx_host,
-                                        'record' => 'Found RFC8482 indicator for TLSA records'
+                                        'message' => sprintf('DANE is enabled (Valid TLSA records found for %s port %d)', $mx_host, $port),
+                                        'mx_host' => $mx_host,
+                                        'port' => $port,
+                                        'tlsa_records' => $valid_records
                                     ];
                                 }
                             }
                         }
                     }
                 }
-
-                // Check the domain itself
-                $check_domain = '_25._tcp.' . $domain;
-                $records = @dns_get_record($check_domain, DNS_ANY);
-                $this->addDebug('DANE', 'Checking domain records', $records);
-
-                foreach ($records as $record) {
-                    if (isset($record['type']) && $record['type'] === 'HINFO' &&
-                        isset($record['cpu']) && $record['cpu'] === 'RFC8482') {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DANE appears to be enabled for domain',
-                            'record' => 'Found RFC8482 indicator for TLSA records'
-                        ];
-                    }
-                }
-
-                return ['status' => 'bad', 'message' => 'No DANE records found'];
+                
+                return [
+                    'status' => 'bad',
+                    'message' => 'No valid TLSA records found for MX hosts, DANE is not enabled'
+                ];
             } catch (Exception $e) {
                 $this->addDebug('DANE', 'Error: ' . $e->getMessage());
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
