@@ -107,6 +107,9 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title><?php echo $lang['title']; ?></title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="assets/css/styles.css">
+        <script src="assets/js/main.js" defer></script>
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
         <style>
             .debug-section pre {
@@ -144,6 +147,11 @@
                         </button>
                     </div>
                 </form>
+
+                <!-- Loading Animation -->
+                <div class="loading-animation">
+                    <div class="shield-spinner"></div>
+                </div>
 
                 <?php if ($error): ?>
                     <div class="text-red-500 p-4 mb-4 bg-red-50 rounded">
