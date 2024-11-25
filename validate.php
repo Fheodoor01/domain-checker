@@ -1,12 +1,8 @@
 <?php
 
 function validateDomain($domain) {
-    return checkDnssecWithPhp($domain);
-}
-
-function checkDnssecWithPhp($domain) {
     try {
-        // Try DNS_A first as it's most commonly supported
+        // Check for DNSSEC using PHP's native DNS functions
         $records = @dns_get_record($domain, DNS_A);
         if (!empty($records)) {
             foreach ($records as $record) {
@@ -16,7 +12,6 @@ function checkDnssecWithPhp($domain) {
             }
         }
 
-        // Try DNS_NS records
         $ns_records = @dns_get_record($domain, DNS_NS);
         if (!empty($ns_records)) {
             foreach ($ns_records as $record) {
@@ -26,7 +21,6 @@ function checkDnssecWithPhp($domain) {
             }
         }
 
-        // Try DNS_SOA records
         $soa_records = @dns_get_record($domain, DNS_SOA);
         if (!empty($soa_records)) {
             foreach ($soa_records as $record) {
@@ -36,7 +30,6 @@ function checkDnssecWithPhp($domain) {
             }
         }
 
-        // Try DNS_ANY if available
         if (defined('DNS_ANY')) {
             $any_records = @dns_get_record($domain, DNS_ANY);
             if (!empty($any_records)) {
@@ -50,9 +43,7 @@ function checkDnssecWithPhp($domain) {
                 }
             }
         }
-
     } catch (Exception $e) {
-        // If any errors occur, assume no DNSSEC
         return false;
     }
 
