@@ -21,7 +21,7 @@
             $error = 'Please enter a domain';
         } else {
             try {
-                $checker = new DomainChecker($config);
+                $checker = new \DomainChecker\DomainChecker($config);
                 $results = $checker->checkAll($domain);
             } catch (Exception $e) {
                 $error = $e->getMessage();
