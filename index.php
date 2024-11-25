@@ -168,27 +168,27 @@
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const domainInput = document.getElementById('domain');
-                const resultsContainer = document.querySelector('.results-container');
-                const loadingAnimation = document.querySelector('.loading-animation');
                 const form = document.querySelector('form');
+                const loadingAnimation = document.querySelector('.loading-animation');
+
+                function hideAllResults() {
+                    const elements = document.querySelectorAll('.results-section, .grid, .bg-red-100, [class*="rounded-lg p-6"]');
+                    elements.forEach(element => {
+                        if (element.parentElement && !element.closest('form')) {
+                            element.style.display = 'none';
+                        }
+                    });
+                }
 
                 // Clear results when typing in domain input
-                domainInput?.addEventListener('input', function() {
-                    const results = document.querySelectorAll('.results-section');
-                    results.forEach(result => {
-                        result.style.display = 'none';
-                    });
-                });
+                domainInput?.addEventListener('input', hideAllResults);
 
                 // Show loading animation when form is submitted
                 form?.addEventListener('submit', function() {
+                    hideAllResults();
                     if (loadingAnimation) {
                         loadingAnimation.style.display = 'flex';
                     }
-                    const results = document.querySelectorAll('.results-section');
-                    results.forEach(result => {
-                        result.style.display = 'none';
-                    });
                 });
             });
         </script>
@@ -268,11 +268,18 @@
                                 $class = 'text-red-600';
                                 $scoreImage = 'score_poor.png';
                             }
+                            
+                            // Format score to remove decimal places if it's a whole number
+                            $displayScore = is_numeric($results['overall_score']) ? 
+                                (floor($results['overall_score']) == $results['overall_score'] ? 
+                                    number_format($results['overall_score'], 0) : 
+                                    number_format($results['overall_score'], 2)) : 
+                                $results['overall_score'];
                             ?>
                             <p class="text-4xl font-bold <?php echo $class; ?> mb-4">
-                                <?php echo $results['overall_score']; ?>/5
+                                <?php echo $displayScore; ?>/5
                             </p>
-                            <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-32 mx-auto">
+                            <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-64 mx-auto">
                         </div>
 
                         <!-- Summary -->
@@ -282,21 +289,21 @@
                             
                             <?php if (!empty($summary['strengths'])): ?>
                                 <div class="mb-4">
-                                    <h3 class="text-green-600 font-bold mb-2"><?php echo $lang['strengths']; ?>:</h3>
+                                    <h3 class="text-green-600 font-bold mb-2"><?php echo ucfirst($lang['strengths']); ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
                                         <?php foreach ($summary['strengths'] as $strength): ?>
-                                            <li><?php echo htmlspecialchars($strength); ?></li>
+                                            <li><?php echo ucfirst(trim(htmlspecialchars($strength))); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>
                             <?php endif; ?>
 
                             <?php if (!empty($summary['improvements'])): ?>
-                                <div class="mb-4">
-                                    <h3 class="text-yellow-600 font-bold mb-2"><?php echo $lang['improvements']; ?>:</h3>
+                                <div>
+                                    <h3 class="text-red-600 font-bold mb-2"><?php echo ucfirst($lang['improvements']); ?>:</h3>
                                     <ul class="list-disc list-inside text-sm">
                                         <?php foreach ($summary['improvements'] as $improvement): ?>
-                                            <li><?php echo htmlspecialchars($improvement['message']); ?></li>
+                                            <li><?php echo ucfirst(trim(htmlspecialchars($improvement['message']))); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>
