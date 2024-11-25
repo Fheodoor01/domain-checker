@@ -171,6 +171,32 @@
                 const form = document.querySelector('form');
                 const loadingAnimation = document.querySelector('.loading-animation');
 
+                function animateScore() {
+                    const scoreValue = document.querySelector('.score-value');
+                    const scoreImage = document.querySelector('.score-image');
+                    if (!scoreValue || !scoreImage) return;
+
+                    const finalScore = scoreValue.textContent;
+                    const finalImage = scoreImage.src;
+                    const images = ['score_poor.png', 'score_fair.png', 'score_good.png', 'score_excellent.png'];
+                    let count = 0;
+
+                    const animation = setInterval(() => {
+                        // Animate score
+                        scoreValue.textContent = (Math.random() * 5).toFixed(2);
+                        
+                        // Animate image
+                        scoreImage.src = 'images/' + images[count % images.length];
+                        count++;
+
+                        if (count > 10) {
+                            clearInterval(animation);
+                            scoreValue.textContent = finalScore;
+                            scoreImage.src = finalImage;
+                        }
+                    }, 50);
+                }
+
                 function hideAllResults() {
                     const elements = document.querySelectorAll('.results-section, .grid, .bg-red-100, [class*="rounded-lg p-6"]');
                     elements.forEach(element => {
@@ -180,48 +206,23 @@
                     });
                 }
 
-                function animateScore(finalScore) {
-                    const scoreElement = document.querySelector('.score-value');
-                    const scoreImage = document.querySelector('.score-image');
-                    const images = ['score_poor.png', 'score_fair.png', 'score_good.png', 'score_excellent.png'];
-                    let currentStep = 0;
-                    const steps = 10; // Number of steps in animation
-                    const duration = 500; // Animation duration in milliseconds
-                    const stepDuration = duration / steps;
-
-                    function updateScoreDisplay(score, imageIndex) {
-                        if (scoreElement) {
-                            scoreElement.textContent = score.toFixed(2) + '/5';
-                            if (scoreImage) {
-                                scoreImage.src = 'images/' + images[imageIndex % images.length];
-                            }
-                        }
-                    }
-
-                    const interval = setInterval(() => {
-                        currentStep++;
-                        const progress = currentStep / steps;
-                        const currentScore = (progress * finalScore) + (Math.random() * 0.5);
-                        const imageIndex = Math.floor(Math.random() * images.length);
-                        
-                        updateScoreDisplay(Math.min(currentScore, 5), imageIndex);
-
-                        if (currentStep >= steps) {
-                            clearInterval(interval);
-                            updateScoreDisplay(finalScore, getImageIndexForScore(finalScore * 20));
-                        }
-                    }, stepDuration);
-                }
-
-                function getImageIndexForScore(score) {
-                    if (score >= 90) return 3; // excellent
-                    if (score >= 70) return 2; // good
-                    if (score >= 50) return 1; // fair
-                    return 0; // poor
-                }
-
                 // Clear results when typing in domain input
                 domainInput?.addEventListener('input', hideAllResults);
+
+                // Watch for new results
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.addedNodes.length) {
+                            mutation.addedNodes.forEach((node) => {
+                                if (node.classList && node.classList.contains('grid')) {
+                                    setTimeout(animateScore, 100);
+                                }
+                            });
+                        }
+                    });
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
 
                 // Show loading animation when form is submitted
                 form?.addEventListener('submit', function() {
@@ -230,25 +231,6 @@
                         loadingAnimation.style.display = 'flex';
                     }
                 });
-
-                // Start animation when results are shown
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.addedNodes.length) {
-                            mutation.addedNodes.forEach((node) => {
-                                if (node.classList && node.classList.contains('grid')) {
-                                    const scoreText = document.querySelector('.score-value');
-                                    if (scoreText) {
-                                        const finalScore = parseFloat(scoreText.textContent);
-                                        animateScore(finalScore);
-                                    }
-                                }
-                            });
-                        }
-                    });
-                });
-
-                observer.observe(document.body, { childList: true, subtree: true });
             });
         </script>
         <link rel="stylesheet" href="assets/css/styles.css">
@@ -335,10 +317,12 @@
                                     number_format($results['overall_score'], 2)) : 
                                 $results['overall_score'];
                             ?>
-                            <p class="text-4xl font-bold <?php echo $class; ?> mb-4">
-                                <span class="score-value"><?php echo $displayScore; ?></span>/5
-                            </p>
-                            <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-64 mx-auto score-image">
+                            <div id="score-display">
+                                <p class="text-4xl font-bold <?php echo $class; ?> mb-4">
+                                    <span class="score-value"><?php echo $displayScore; ?></span>/5
+                                </p>
+                                <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-64 mx-auto score-image">
+                            </div>
                         </div>
 
                         <!-- Summary -->
