@@ -165,10 +165,14 @@
                 $ports = [25, 465, 587];
                 foreach ($ports as $port) {
                     $tlsa_domain = sprintf('_%d._tcp.%s', $port, $domain);
-                    $tlsa_records = @dns_get_record($tlsa_domain, DNS_TLSA);
-                    $this->addDebug('DANE', "Checking TLSA records for $tlsa_domain:", $tlsa_records);
                     
-                    if (!empty($tlsa_records)) {
+                    // Use dig command for TLSA lookup since DNS_TLSA constant might not be available
+                    $command = sprintf('dig +short TYPE52 %s', escapeshellarg($tlsa_domain));
+                    $output = trim(shell_exec($command));
+                    
+                    $this->addDebug('DANE', "Checking TLSA records for $tlsa_domain:", $output);
+                    
+                    if (!empty($output)) {
                         return [
                             'status' => 'good',
                             'message' => 'DANE is enabled (TLSA record found)',
