@@ -164,12 +164,53 @@
             .results-container {
                 transition: opacity 0.3s ease-in-out;
             }
+
+            .invalid-domain {
+                border-color: #ef4444 !important;
+            }
+
+            .domain-error {
+                color: #ef4444;
+                font-size: 0.875rem;
+                margin-top: 0.5rem;
+                display: none;
+            }
         </style>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const domainInput = document.getElementById('domain');
                 const form = document.querySelector('form');
                 const loadingAnimation = document.querySelector('.loading-animation');
+                const submitButton = form.querySelector('button[type="submit"]');
+
+                function isValidDomain(domain) {
+                    // Domain validation regex
+                    const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+                    return domainRegex.test(domain);
+                }
+
+                function validateDomain() {
+                    const domain = domainInput.value.trim();
+                    const errorDiv = document.getElementById('domain-error');
+                    
+                    if (domain === '') {
+                        domainInput.classList.remove('invalid-domain');
+                        errorDiv.style.display = 'none';
+                        submitButton.disabled = true;
+                        return;
+                    }
+
+                    if (!isValidDomain(domain)) {
+                        domainInput.classList.add('invalid-domain');
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = '<?php echo $lang['invalid_domain'] ?? "Please enter a valid domain name"; ?>';
+                        submitButton.disabled = true;
+                    } else {
+                        domainInput.classList.remove('invalid-domain');
+                        errorDiv.style.display = 'none';
+                        submitButton.disabled = false;
+                    }
+                }
 
                 function animateScore() {
                     const scoreValue = document.querySelector('.score-value');
@@ -207,26 +248,18 @@
                     });
                 }
 
-                // Clear results when typing in domain input
-                domainInput?.addEventListener('input', hideAllResults);
-
-                // Watch for new results
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.addedNodes.length) {
-                            mutation.addedNodes.forEach((node) => {
-                                if (node.classList && node.classList.contains('grid')) {
-                                    setTimeout(animateScore, 100);
-                                }
-                            });
-                        }
-                    });
+                // Validate domain on input
+                domainInput?.addEventListener('input', () => {
+                    validateDomain();
+                    hideAllResults();
                 });
 
-                observer.observe(document.body, { childList: true, subtree: true });
-
                 // Show loading animation when form is submitted
-                form?.addEventListener('submit', function() {
+                form?.addEventListener('submit', function(e) {
+                    if (!isValidDomain(domainInput.value.trim())) {
+                        e.preventDefault();
+                        return;
+                    }
                     hideAllResults();
                     if (loadingAnimation) {
                         loadingAnimation.style.display = 'flex';
@@ -238,6 +271,9 @@
                 if (scoreDisplay) {
                     setTimeout(animateScore, 100);
                 }
+
+                // Initial validation state
+                validateDomain();
             });
         </script>
         <link rel="stylesheet" href="assets/css/styles.css">
@@ -264,18 +300,23 @@
             
             <div class="bg-white rounded-lg shadow p-6">
                 <form method="post" class="mb-6">
-                    <div class="flex gap-4">
-                        <input type="text" 
-                               id="domain" 
-                               name="domain" 
-                               class="flex-1 p-2 border rounded" 
-                               placeholder="<?php echo $lang['enter_domain']; ?>" 
-                               value="<?php echo htmlspecialchars($_POST['domain'] ?? ''); ?>"
-                               required>
-                        <button type="submit" 
-                                class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                            <?php echo $lang['check_button']; ?>
-                        </button>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <input type="text" 
+                                    id="domain" 
+                                    name="domain" 
+                                    class="w-full p-2 border rounded" 
+                                    placeholder="<?php echo $lang['enter_domain']; ?>" 
+                                    value="<?php echo htmlspecialchars($_POST['domain'] ?? ''); ?>"
+                                    required>
+                                <div id="domain-error" class="domain-error"></div>
+                            </div>
+                            <button type="submit" 
+                                    class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <?php echo $lang['check_button']; ?>
+                            </button>
+                        </div>
                     </div>
                 </form>
 
