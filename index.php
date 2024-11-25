@@ -252,9 +252,27 @@
                         <!-- Score -->
                         <div class="text-center bg-gray-50 rounded-lg p-6">
                             <h2 class="text-2xl font-bold mb-2"><?php echo $lang['overall_score']; ?></h2>
-                            <p class="text-4xl font-bold <?php echo $results['overall_score'] >= 4 ? 'text-green-600' : 'text-yellow-600'; ?>">
+                            <?php 
+                            $score = $results['overall_score'] * 20;
+                            $scoreImage = '';
+                            if ($score >= 90) {
+                                $class = 'text-green-600';
+                                $scoreImage = 'score_excellent.png';
+                            } elseif ($score >= 70) {
+                                $class = 'text-green-500';
+                                $scoreImage = 'score_good.png';
+                            } elseif ($score >= 50) {
+                                $class = 'text-yellow-600';
+                                $scoreImage = 'score_fair.png';
+                            } else {
+                                $class = 'text-red-600';
+                                $scoreImage = 'score_poor.png';
+                            }
+                            ?>
+                            <p class="text-4xl font-bold <?php echo $class; ?> mb-4">
                                 <?php echo $results['overall_score']; ?>/5
                             </p>
+                            <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-32 mx-auto">
                         </div>
 
                         <!-- Summary -->
