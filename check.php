@@ -170,27 +170,26 @@
                 }
                 
                 // Check for TLSA records on common mail ports
-                $ports = [25, 465, 587];
+                $ports = [25, 443, 465, 587];
                 foreach ($ports as $port) {
                     $tlsa_domain = sprintf('_%d._tcp.%s', $port, $domain);
                     
-                    // First check if TLSA record exists using +short
+                    // Get TLSA record using +short (similar to Python's dns.resolver.resolve)
                     $command = sprintf('dig +short TLSA %s', escapeshellarg($tlsa_domain));
                     $output = shell_exec($command);
                     
                     if (!empty(trim($output ?? ''))) {
-                        // If we got a short answer, verify it's valid with full output
-                        $command = sprintf('dig +dnssec %s TLSA', escapeshellarg($tlsa_domain));
-                        $full_output = shell_exec($command);
-                        
-                        // Check for AD flag and answer section
-                        if (strpos($full_output, 'flags: qr rd ra ad;') !== false && 
-                            strpos($full_output, 'ANSWER SECTION') !== false) {
-                            return [
-                                'status' => 'good',
-                                'message' => 'DANE is enabled (TLSA record found)',
-                                'port' => $port
-                            ];
+                        // Split the output into lines and check each TLSA record
+                        $lines = array_filter(explode("\n", trim($output)));
+                        foreach ($lines as $line) {
+                            // TLSA record format: usage selector matching_type certificate_data
+                            if (preg_match('/^\s*(\d+)\s+(\d+)\s+(\d+)\s+([a-fA-F0-9]+)\s*$/', trim($line))) {
+                                return [
+                                    'status' => 'good',
+                                    'message' => 'DANE is enabled (TLSA record found)',
+                                    'port' => $port
+                                ];
+                            }
                         }
                     }
                 }
