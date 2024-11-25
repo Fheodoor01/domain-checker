@@ -110,8 +110,8 @@ The tool returns results in the following format:
 
 ## License
 
-[Your License Here]
+APACHE
 
 ## Credits
 
-Developed by [Your Organization/Name]
+Developed by Immutec BV/P.Verleye
