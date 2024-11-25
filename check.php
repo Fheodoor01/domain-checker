@@ -182,27 +182,42 @@
                 
                 // Parse MX records
                 $mx_records = array_filter(explode("\n", trim($mx_output)));
+                $ports = [25, 465, 587]; // Common SMTP ports
+                
                 foreach ($mx_records as $mx_record) {
                     // MX record format: priority hostname
                     if (preg_match('/^\d+\s+(.+?)\.?$/', trim($mx_record), $matches)) {
-                        $mx_host = $matches[1];
+                        $mx_host = rtrim($matches[1], '.');
                         
-                        // Check for TLSA records on port 25 for the MX host
-                        $tlsa_domain = sprintf('_25._tcp.%s', $mx_host);
-                        $command = sprintf('dig +short TLSA %s', escapeshellarg($tlsa_domain));
-                        $output = shell_exec($command);
-                        
-                        if (!empty(trim($output ?? ''))) {
-                            // Split the output into lines and check each TLSA record
-                            $lines = array_filter(explode("\n", trim($output)));
-                            foreach ($lines as $line) {
-                                // TLSA record format: usage selector matching_type certificate_data
-                                if (preg_match('/^\s*(\d+)\s+(\d+)\s+(\d+)\s+([a-fA-F0-9]+)\s*$/', trim($line))) {
-                                    return [
-                                        'status' => 'good',
-                                        'message' => 'DANE is enabled (TLSA record found for MX host)',
-                                        'mx_host' => $mx_host
-                                    ];
+                        foreach ($ports as $port) {
+                            // Check for TLSA records for each port
+                            $tlsa_domain = sprintf('_%d._tcp.%s', $port, $mx_host);
+                            $command = sprintf('dig +dnssec +short TLSA %s', escapeshellarg($tlsa_domain));
+                            $output = shell_exec($command);
+                            
+                            if (!empty(trim($output ?? ''))) {
+                                // Split the output into lines and check each TLSA record
+                                $lines = array_filter(explode("\n", trim($output)));
+                                foreach ($lines as $line) {
+                                    // TLSA record format: usage selector matching_type certificate_data
+                                    if (preg_match('/^\s*(\d+)\s+(\d+)\s+(\d+)\s+([a-fA-F0-9]+)\s*$/', trim($line), $matches)) {
+                                        $usage = (int)$matches[1];
+                                        $selector = (int)$matches[2];
+                                        $matching_type = (int)$matches[3];
+                                        
+                                        // Validate TLSA record format
+                                        if (($usage >= 0 && $usage <= 3) && 
+                                            ($selector >= 0 && $selector <= 1) && 
+                                            ($matching_type >= 0 && $matching_type <= 2)) {
+                                            return [
+                                                'status' => 'good',
+                                                'message' => sprintf('DANE is enabled (Valid TLSA record found for %s port %d)', $mx_host, $port),
+                                                'mx_host' => $mx_host,
+                                                'port' => $port,
+                                                'tlsa_record' => $line
+                                            ];
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -211,7 +226,7 @@
                 
                 return [
                     'status' => 'bad',
-                    'message' => 'No TLSA records found for MX hosts, DANE is not enabled'
+                    'message' => 'No valid TLSA records found for MX hosts, DANE is not enabled'
                 ];
             } catch (Exception $e) {
                 $this->addDebug('DANE', 'Error: ' . $e->getMessage());
