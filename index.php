@@ -15,17 +15,20 @@
     $error = null;
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $domain = $_POST['domain'] ?? '';
+        $domain = $_POST['domain'] ?? null;
         
-        if (empty($domain)) {
-            $error = 'Please enter a domain';
-        } else {
+        if ($domain) {
             try {
                 $checker = new \DomainChecker\DomainChecker($config);
                 $results = $checker->checkAll($domain);
+                if ($results === false) {
+                    $error = 'Domain is not valid. Please check your input and try again.';
+                }
             } catch (Exception $e) {
                 $error = $e->getMessage();
             }
+        } else {
+            $error = 'Please enter a domain';
         }
     }
 
@@ -174,6 +177,12 @@
                 font-size: 0.875rem;
                 margin-top: 0.5rem;
                 display: none;
+                position: absolute;
+            }
+
+            .input-container {
+                position: relative;
+                flex: 1;
             }
         </style>
         <script>
@@ -302,7 +311,7 @@
                 <form method="post" class="mb-6">
                     <div class="flex flex-col gap-4">
                         <div class="flex gap-4">
-                            <div class="flex-1">
+                            <div class="input-container">
                                 <input type="text" 
                                     id="domain" 
                                     name="domain" 
@@ -326,8 +335,9 @@
                 </div>
 
                 <?php if ($error): ?>
-                    <div class="text-red-500 p-4 mb-4 bg-red-50 rounded">
-                        <?php echo htmlspecialchars($error); ?>
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                        <strong class="font-bold">Error: </strong>
+                        <span class="block sm:inline"><?php echo htmlspecialchars($error); ?></span>
                     </div>
                 <?php endif; ?>
 
