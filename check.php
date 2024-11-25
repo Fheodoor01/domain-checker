@@ -25,7 +25,6 @@
 
             $score = $this->calculateScore($results);
             $results['overall_score'] = $score;
-            $results['debug'] = $this->debug;
 
             return $results;
         }
