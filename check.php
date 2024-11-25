@@ -10,14 +10,16 @@
         public function checkAll($domain) {
             $this->debug = []; // Reset debug info
             
-            // Check if domain exists
-            $command = sprintf('dig +short A %s', escapeshellarg($domain));
-            $output = shell_exec($command);
+            // Check if domain exists using both A and NS records
+            $command = sprintf('dig +short %s', escapeshellarg($domain));
+            $output_a = shell_exec($command . ' A');
+            $output_ns = shell_exec($command . ' NS');
             
-            if (empty(trim($output ?? ''))) {
+            if (empty(trim($output_a ?? '')) && empty(trim($output_ns ?? ''))) {
                 return [
                     'error' => true,
-                    'message' => 'Domain does not exist'
+                    'message' => 'Domain does not exist',
+                    'overall_score' => 0
                 ];
             }
             
