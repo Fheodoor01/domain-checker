@@ -17,9 +17,17 @@
             
             if (empty(trim($output_a ?? '')) && empty(trim($output_ns ?? ''))) {
                 return [
-                    'error' => true,
-                    'message' => 'Domain does not exist',
-                    'overall_score' => 0
+                    'overall_score' => 0,
+                    'nameservers' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'smtp' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'dnssec' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'spf' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'dmarc' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'dane' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'tls' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'tls_report' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'mta_sts' => ['status' => 'bad', 'message' => 'Domain does not exist'],
+                    'bimi' => ['status' => 'bad', 'message' => 'Domain does not exist']
                 ];
             }
             
