@@ -180,6 +180,7 @@
                     const finalImage = scoreImage.src;
                     const images = ['score_poor.png', 'score_fair.png', 'score_good.png', 'score_excellent.png'];
                     let count = 0;
+                    const totalSteps = 20;
 
                     const animation = setInterval(() => {
                         // Animate score
@@ -189,12 +190,12 @@
                         scoreImage.src = 'images/' + images[count % images.length];
                         count++;
 
-                        if (count > 10) {
+                        if (count > totalSteps) {
                             clearInterval(animation);
                             scoreValue.textContent = finalScore;
                             scoreImage.src = finalImage;
                         }
-                    }, 50);
+                    }, 100);
                 }
 
                 function hideAllResults() {
