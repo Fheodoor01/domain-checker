@@ -37,86 +37,16 @@ class Security {
         // Set timeout
         $timeout = $timeout ?? self::MAX_EXECUTION_TIME;
         
-        // Prepare descriptors for proc_open
-        $descriptors = [
-            0 => ['pipe', 'r'],  // stdin
-            1 => ['pipe', 'w'],  // stdout
-            2 => ['pipe', 'w']   // stderr
-        ];
+        // Try to use shell_exec as a fallback
+        $output = shell_exec($full_command);
         
-        // Start process
-        $process = proc_open($full_command, $descriptors, $pipes);
-        
-        if (!is_resource($process)) {
+        if ($output === null) {
             throw new \RuntimeException("Failed to execute command");
-        }
-        
-        // Set non-blocking mode
-        stream_set_blocking($pipes[1], false);
-        stream_set_blocking($pipes[2], false);
-        
-        // Initialize variables
-        $output = '';
-        $error = '';
-        $start_time = time();
-        
-        // Read output with timeout
-        while (true) {
-            $read = [$pipes[1], $pipes[2]];
-            $write = null;
-            $except = null;
-            
-            // Check if process has timed out
-            if (time() - $start_time > $timeout) {
-                proc_terminate($process);
-                throw new \RuntimeException("Command execution timed out");
-            }
-            
-            // Wait for output
-            if (stream_select($read, $write, $except, 1) === false) {
-                break;
-            }
-            
-            // Read stdout
-            if (in_array($pipes[1], $read)) {
-                $output .= fread($pipes[1], 8192);
-                if (strlen($output) > self::MAX_OUTPUT_SIZE) {
-                    proc_terminate($process);
-                    throw new \RuntimeException("Command output exceeded maximum size");
-                }
-            }
-            
-            // Read stderr
-            if (in_array($pipes[2], $read)) {
-                $error .= fread($pipes[2], 8192);
-                if (strlen($error) > self::MAX_OUTPUT_SIZE) {
-                    proc_terminate($process);
-                    throw new \RuntimeException("Command error output exceeded maximum size");
-                }
-            }
-            
-            // Check if process has finished
-            $status = proc_get_status($process);
-            if (!$status['running']) {
-                break;
-            }
-        }
-        
-        // Close pipes
-        fclose($pipes[0]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        
-        // Close process
-        $exit_code = proc_close($process);
-        
-        if ($exit_code !== 0) {
-            throw new \RuntimeException("Command failed with exit code: " . $exit_code);
         }
         
         return [
             'output' => $output,
-            'error' => $error
+            'error' => ''
         ];
     }
     
