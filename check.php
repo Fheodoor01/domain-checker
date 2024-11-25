@@ -12,7 +12,7 @@
             
             // Check nameservers first
             $command = sprintf('dig +short NS %s', escapeshellarg($domain));
-            $output = shell_exec($command);
+            $output = Security::safeExecute('dig', ['+short', 'NS', $domain])['output'];
             
             if (empty(trim($output ?? ''))) {
                 // No nameservers found, domain likely doesn't exist
@@ -171,7 +171,7 @@
                 
                 // First get MX records
                 $command = sprintf('dig +short MX %s', escapeshellarg($domain));
-                $mx_output = shell_exec($command);
+                $mx_output = Security::safeExecute('dig', ['+short', 'MX', $domain])['output'];
                 
                 if (empty(trim($mx_output ?? ''))) {
                     return [
@@ -194,7 +194,7 @@
                             $tlsa_domain = sprintf('_%d._tcp.%s', $port, $mx_host);
                             // Use dig without +short to get full output including RRSIG
                             $command = sprintf('dig +dnssec TLSA %s', escapeshellarg($tlsa_domain));
-                            $output = shell_exec($command);
+                            $output = Security::safeExecute('dig', ['+dnssec', 'TLSA', $tlsa_domain])['output'];
                             
                             if (!empty($output)) {
                                 $has_valid_tlsa = false;
@@ -405,4 +405,5 @@
             }
         }
     }
+    require_once __DIR__ . '/src/Security.php';
     ?>
