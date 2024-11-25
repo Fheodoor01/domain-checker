@@ -108,9 +108,92 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title><?php echo $lang['title']; ?></title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .loading-animation {
+                display: none;
+                justify-content: center;
+                align-items: center;
+                margin: 2rem 0;
+            }
+
+            .shield-spinner {
+                width: 60px;
+                height: 60px;
+                position: relative;
+                animation: shield-pulse 1.5s ease-in-out infinite;
+            }
+
+            .shield-spinner:before {
+                content: '';
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                border: 3px solid #4f46e5;
+                border-top-color: transparent;
+                animation: shield-spin 1s linear infinite;
+            }
+
+            .shield-spinner:after {
+                content: '🛡️';
+                font-size: 24px;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+
+            @keyframes shield-spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes shield-pulse {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.1);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+
+            .results-container {
+                transition: opacity 0.3s ease-in-out;
+            }
+        </style>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const domainInput = document.getElementById('domain');
+                const resultsContainer = document.querySelector('.results-container');
+                const loadingAnimation = document.querySelector('.loading-animation');
+                const form = document.querySelector('form');
+
+                // Clear results when typing in domain input
+                domainInput?.addEventListener('input', function() {
+                    const results = document.querySelectorAll('.results-section');
+                    results.forEach(result => {
+                        result.style.display = 'none';
+                    });
+                });
+
+                // Show loading animation when form is submitted
+                form?.addEventListener('submit', function() {
+                    if (loadingAnimation) {
+                        loadingAnimation.style.display = 'flex';
+                    }
+                    const results = document.querySelectorAll('.results-section');
+                    results.forEach(result => {
+                        result.style.display = 'none';
+                    });
+                });
+            });
+        </script>
         <link rel="stylesheet" href="assets/css/styles.css">
         <script src="assets/js/main.js" defer></script>
-        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
         <style>
             .debug-section pre {
                 white-space: pre-wrap;
@@ -225,7 +308,7 @@
                     </div>
 
                     <!-- Detailed Results -->
-                    <div class="space-y-4">
+                    <div class="space-y-4 results-section">
                         <?php foreach ($lang['sections'] as $key => $title):
                             if (isset($results[$key])):
                         ?>
