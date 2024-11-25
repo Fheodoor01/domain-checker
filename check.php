@@ -192,32 +192,50 @@
                         foreach ($ports as $port) {
                             // Check for TLSA records for each port
                             $tlsa_domain = sprintf('_%d._tcp.%s', $port, $mx_host);
-                            $command = sprintf('dig +dnssec +short TLSA %s', escapeshellarg($tlsa_domain));
+                            // Use dig without +short to get full output including RRSIG
+                            $command = sprintf('dig +dnssec TLSA %s', escapeshellarg($tlsa_domain));
                             $output = shell_exec($command);
                             
-                            if (!empty(trim($output ?? ''))) {
-                                // Split the output into lines and check each TLSA record
-                                $lines = array_filter(explode("\n", trim($output)));
+                            if (!empty($output)) {
+                                $has_valid_tlsa = false;
+                                $has_rrsig = false;
+                                $valid_records = [];
+                                
+                                // Parse the dig output
+                                $lines = explode("\n", $output);
                                 foreach ($lines as $line) {
-                                    // TLSA record format: usage selector matching_type certificate_data
-                                    if (preg_match('/^\s*(\d+)\s+(\d+)\s+(\d+)\s+([a-fA-F0-9]+)\s*$/', trim($line), $matches)) {
-                                        $usage = (int)$matches[1];
-                                        $selector = (int)$matches[2];
-                                        $matching_type = (int)$matches[3];
-                                        
-                                        // Validate TLSA record format
-                                        if (($usage >= 0 && $usage <= 3) && 
-                                            ($selector >= 0 && $selector <= 1) && 
-                                            ($matching_type >= 0 && $matching_type <= 2)) {
-                                            return [
-                                                'status' => 'good',
-                                                'message' => sprintf('DANE is enabled (Valid TLSA record found for %s port %d)', $mx_host, $port),
-                                                'mx_host' => $mx_host,
-                                                'port' => $port,
-                                                'tlsa_record' => $line
-                                            ];
+                                    // Check for TLSA records
+                                    if (strpos($line, 'TLSA') !== false && strpos($line, 'RRSIG') === false) {
+                                        // Extract just the TLSA data
+                                        if (preg_match('/TLSA\s+(\d+)\s+(\d+)\s+(\d+)\s+([A-F0-9]+)/i', $line, $matches)) {
+                                            $usage = (int)$matches[1];
+                                            $selector = (int)$matches[2];
+                                            $matching_type = (int)$matches[3];
+                                            
+                                            // Validate TLSA record format
+                                            if (($usage >= 0 && $usage <= 3) && 
+                                                ($selector >= 0 && $selector <= 1) && 
+                                                ($matching_type >= 0 && $matching_type <= 2)) {
+                                                $has_valid_tlsa = true;
+                                                $valid_records[] = sprintf("%d %d %d %s", $usage, $selector, $matching_type, $matches[4]);
+                                            }
                                         }
                                     }
+                                    // Check for RRSIG record
+                                    if (strpos($line, 'RRSIG') !== false && strpos($line, 'TLSA') !== false) {
+                                        $has_rrsig = true;
+                                    }
+                                }
+                                
+                                // Only consider DANE valid if we have both TLSA and RRSIG
+                                if ($has_valid_tlsa && $has_rrsig) {
+                                    return [
+                                        'status' => 'good',
+                                        'message' => sprintf('DANE is enabled (Valid TLSA records found for %s port %d)', $mx_host, $port),
+                                        'mx_host' => $mx_host,
+                                        'port' => $port,
+                                        'tlsa_records' => $valid_records
+                                    ];
                                 }
                             }
                         }
