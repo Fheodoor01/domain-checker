@@ -10,6 +10,17 @@
         public function checkAll($domain) {
             $this->debug = []; // Reset debug info
             
+            // Check if domain exists
+            $command = sprintf('dig +short A %s', escapeshellarg($domain));
+            $output = shell_exec($command);
+            
+            if (empty(trim($output ?? ''))) {
+                return [
+                    'error' => true,
+                    'message' => 'Domain does not exist'
+                ];
+            }
+            
             $results = [
                 'nameservers' => $this->checkNameservers($domain),
                 'smtp' => $this->checkSmtp($domain),
