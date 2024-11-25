@@ -174,23 +174,24 @@
                 foreach ($ports as $port) {
                     $tlsa_domain = sprintf('_%d._tcp.%s', $port, $domain);
                     
-                    // Use dig to check for TLSA records with full output to properly parse records
-                    $command = sprintf('dig +dnssec %s TLSA', escapeshellarg($tlsa_domain));
+                    // First check if TLSA record exists using +short
+                    $command = sprintf('dig +short TLSA %s', escapeshellarg($tlsa_domain));
                     $output = shell_exec($command);
                     
-                    if ($output === null) {
-                        continue;
-                    }
-
-                    $this->addDebug('DANE', "Checking TLSA records for $tlsa_domain", $output);
-                    
-                    // Check if we have a valid TLSA record in the ANSWER SECTION
-                    if (preg_match('/;; ANSWER SECTION:\n[^;]*IN\s+TLSA\s+/', $output)) {
-                        return [
-                            'status' => 'good',
-                            'message' => 'DANE is enabled (TLSA record found)',
-                            'port' => $port
-                        ];
+                    if (!empty(trim($output ?? ''))) {
+                        // If we got a short answer, verify it's valid with full output
+                        $command = sprintf('dig +dnssec %s TLSA', escapeshellarg($tlsa_domain));
+                        $full_output = shell_exec($command);
+                        
+                        // Check for AD flag and answer section
+                        if (strpos($full_output, 'flags: qr rd ra ad;') !== false && 
+                            strpos($full_output, 'ANSWER SECTION') !== false) {
+                            return [
+                                'status' => 'good',
+                                'message' => 'DANE is enabled (TLSA record found)',
+                                'port' => $port
+                            ];
+                        }
                     }
                 }
                 
