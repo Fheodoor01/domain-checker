@@ -180,7 +180,7 @@
                     const finalImage = scoreImage.src;
                     const images = ['score_poor.png', 'score_fair.png', 'score_good.png', 'score_excellent.png'];
                     let count = 0;
-                    const totalSteps = 20;
+                    const totalSteps = 15;
 
                     const animation = setInterval(() => {
                         // Animate score
@@ -335,12 +335,12 @@
                         <!-- Summary -->
                         <?php $summary = generateSummary($results, $lang); ?>
                         <div class="bg-gray-50 rounded-lg p-6">
-                            <h2 class="text-2xl font-bold mb-4"><?php echo $lang['summary']; ?></h2>
+                            <h2 class="text-2xl font-bold mb-6"><?php echo ucfirst($lang['summary']); ?></h2>
                             
                             <?php if (!empty($summary['strengths'])): ?>
-                                <div class="mb-4">
-                                    <h3 class="text-green-600 font-bold mb-2"><?php echo ucfirst($lang['strengths']); ?>:</h3>
-                                    <ul class="list-disc list-inside text-sm">
+                                <div class="mb-6">
+                                    <h3 class="text-green-600 font-bold mb-3"><?php echo ucfirst($lang['strengths']); ?></h3>
+                                    <ul class="list-disc list-inside text-sm space-y-2">
                                         <?php foreach ($summary['strengths'] as $strength): ?>
                                             <li><?php echo ucfirst(trim(htmlspecialchars($strength))); ?></li>
                                         <?php endforeach; ?>
@@ -349,9 +349,9 @@
                             <?php endif; ?>
 
                             <?php if (!empty($summary['improvements'])): ?>
-                                <div>
-                                    <h3 class="text-red-600 font-bold mb-2"><?php echo ucfirst($lang['improvements']); ?>:</h3>
-                                    <ul class="list-disc list-inside text-sm">
+                                <div class="mb-6">
+                                    <h3 class="text-red-600 font-bold mb-3"><?php echo ucfirst($lang['improvements']); ?></h3>
+                                    <ul class="list-disc list-inside text-sm space-y-2">
                                         <?php foreach ($summary['improvements'] as $improvement): ?>
                                             <li><?php echo ucfirst(trim(htmlspecialchars($improvement['message']))); ?></li>
                                         <?php endforeach; ?>
