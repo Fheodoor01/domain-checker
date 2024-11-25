@@ -10,25 +10,13 @@
         public function checkAll($domain) {
             $this->debug = []; // Reset debug info
             
-            // Check if domain exists using both A and NS records
-            $command = sprintf('dig +short %s', escapeshellarg($domain));
-            $output_a = shell_exec($command . ' A');
-            $output_ns = shell_exec($command . ' NS');
+            // Check nameservers first
+            $command = sprintf('dig +short NS %s', escapeshellarg($domain));
+            $output = shell_exec($command);
             
-            if (empty(trim($output_a ?? '')) && empty(trim($output_ns ?? ''))) {
-                return [
-                    'overall_score' => 0,
-                    'nameservers' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'smtp' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'dnssec' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'spf' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'dmarc' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'dane' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'tls' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'tls_report' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'mta_sts' => ['status' => 'bad', 'message' => 'Domain does not exist'],
-                    'bimi' => ['status' => 'bad', 'message' => 'Domain does not exist']
-                ];
+            if (empty(trim($output ?? ''))) {
+                // No nameservers found, domain likely doesn't exist
+                return 'Error: Domain does not exist';
             }
             
             $results = [

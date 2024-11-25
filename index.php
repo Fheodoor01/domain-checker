@@ -152,6 +152,11 @@
                 <?php endif; ?>
 
                 <?php if ($results): ?>
+                    <?php if (is_string($results)): ?>
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                            <strong class="font-bold"><?php echo $results; ?></strong>
+                        </div>
+                    <?php else: ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <!-- Score -->
                         <div class="text-center bg-gray-50 rounded-lg p-6">
@@ -289,6 +294,7 @@
                         </div>
                     <?php endif; ?>
                 <?php endif; ?>
+            <?php endif; ?>
             </div>
         </div>
     </body>
