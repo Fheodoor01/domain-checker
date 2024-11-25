@@ -185,7 +185,7 @@
                     $this->addDebug('DANE', "Checking TLSA records for $tlsa_domain", $output);
                     
                     // Check if we have a valid TLSA record (look for TLSA in the answer section)
-                    if (preg_match('/IN\s+TLSA\s+/', $output)) {
+                    if (preg_match('/^\s*\d+\s+IN\s+TLSA\s+/', $output)) {
                         return [
                             'status' => 'good',
                             'message' => 'DANE is enabled (TLSA record found)',
