@@ -1,51 +1,21 @@
 <?php
 
 function validateDomain($domain) {
-    try {
-        // Check for DNSSEC using PHP's native DNS functions
-        $records = @dns_get_record($domain, DNS_A);
-        if (!empty($records)) {
-            foreach ($records as $record) {
-                if (isset($record['type']) && $record['type'] === 'RRSIG') {
-                    return true;
-                }
-            }
-        }
-
-        $ns_records = @dns_get_record($domain, DNS_NS);
-        if (!empty($ns_records)) {
-            foreach ($ns_records as $record) {
-                if (isset($record['type']) && $record['type'] === 'RRSIG') {
-                    return true;
-                }
-            }
-        }
-
-        $soa_records = @dns_get_record($domain, DNS_SOA);
-        if (!empty($soa_records)) {
-            foreach ($soa_records as $record) {
-                if (isset($record['type']) && $record['type'] === 'RRSIG') {
-                    return true;
-                }
-            }
-        }
-
-        if (defined('DNS_ANY')) {
-            $any_records = @dns_get_record($domain, DNS_ANY);
-            if (!empty($any_records)) {
-                foreach ($any_records as $record) {
-                    if (isset($record['type'])) {
-                        $type = strtoupper($record['type']);
-                        if ($type === 'RRSIG' || $type === 'DNSKEY' || $type === 'DS') {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-    } catch (Exception $e) {
+    // Sanitize domain input
+    $domain = escapeshellarg(trim($domain));
+    
+    // Use dig command to check DNSSEC
+    $command = "dig +dnssec " . $domain;
+    $output = shell_exec($command);
+    
+    if ($output === null) {
         return false;
     }
-
-    return false;
+    
+    // Check for authenticated data flag (ad) and RRSIG
+    $hasAD = (strpos($output, 'flags: qr rd ra ad;') !== false);
+    $hasRRSIG = (strpos($output, 'RRSIG') !== false);
+    
+    // Domain has valid DNSSEC if both AD flag is set and RRSIG records exist
+    return ($hasAD && $hasRRSIG);
 }
