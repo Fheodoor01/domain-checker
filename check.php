@@ -3,13 +3,16 @@
 namespace DomainChecker;
 
 require_once __DIR__ . '/src/Security.php';
+require_once __DIR__ . '/src/Logger.php';
 
     class DomainChecker {
         private $config;
         private $debug = [];
+        private $logger;
         
         public function __construct($config) {
             $this->config = $config;
+            $this->logger = new Logger();
         }
         
         public function checkAll($domain) {
@@ -21,6 +24,7 @@ require_once __DIR__ . '/src/Security.php';
             
             if (empty(trim($output ?? ''))) {
                 // No nameservers found, domain likely doesn't exist
+                $this->logger->logCheck($domain, 'Error: Domain does not exist');
                 return 'Error: Domain does not exist';
             }
             
@@ -42,6 +46,9 @@ require_once __DIR__ . '/src/Security.php';
 
             $score = $this->calculateScore($results);
             $results['overall_score'] = $score;
+
+            // Log the check with results
+            $this->logger->logCheck($domain, $results);
 
             return $results;
         }

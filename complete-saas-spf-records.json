@@ -1964,6 +1964,11 @@
       "name": "Gripp",
       "description": "Business management software",
       "spf_include": "_spf.gripp.com"
+    },
+    {
+      "name": "iManager",
+      "description": "Business management and administration platform",
+      "spf_include": "spf.imanager.nl"
     }
   ]
 }
