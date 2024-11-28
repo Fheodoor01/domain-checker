@@ -151,11 +151,12 @@
                 width: 80px;
                 height: 80px;
                 position: relative;
-                animation: shield-pulse 1.5s ease-in-out infinite;
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
 
-            .shield-spinner:before {
-                content: '';
+            .shield-spinner .spinner-ring {
                 position: absolute;
                 width: 100%;
                 height: 100%;
@@ -165,18 +166,10 @@
                 animation: shield-spin 1s linear infinite;
             }
 
-            .shield-spinner:after {
-                content: '';
-                background-image: url('images/shield.png');
-                background-size: contain;
-                background-repeat: no-repeat;
-                background-position: center;
-                width: 60px;
-                height: 60px;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
+            .shield-spinner img {
+                width: 60%;
+                height: 60%;
+                animation: shield-pulse 1.5s ease-in-out infinite;
             }
 
             @keyframes shield-spin {
@@ -364,7 +357,10 @@
 
                 <!-- Loading Animation -->
                 <div class="loading-animation">
-                    <div class="shield-spinner"></div>
+                    <div class="shield-spinner">
+                        <div class="spinner-ring"></div>
+                        <img src="images/shield.png" alt="Shield">
+                    </div>
                 </div>
 
                 <?php if ($error): ?>
