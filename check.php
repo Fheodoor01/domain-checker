@@ -265,30 +265,37 @@ require_once __DIR__ . '/src/Security.php';
             $spfProviders = json_decode(file_get_contents(__DIR__ . '/complete-saas-spf-records.json'), true)['providers'];
             $unidentifiedRecordsFile = __DIR__ . '/unidentified_spf_records.json';
             
+            // Group providers by SPF include
+            $spfGroups = [];
+            foreach ($spfProviders as $provider) {
+                if ($provider['spf_include']) {
+                    $spfGroups[$provider['spf_include']][] = $provider;
+                }
+            }
+            
             if ($spfRecord && isset($spfRecord['record'])) {
                 $spfText = strtolower($spfRecord['record']);
                 
-                // Extract all include mechanisms
+                // Extract all include mechanisms for logging unidentified records
                 preg_match_all('/include:([^\s]+)/', $spfText, $matches);
                 $includes = $matches[1] ?? [];
                 $identifiedIncludes = [];
                 
-                foreach ($spfProviders as $provider) {
-                    if ($provider['spf_include'] && 
-                        (strpos($spfText, $provider['spf_include']) !== false || 
-                         strpos($spfText, strtolower($provider['name'])) !== false)) {
+                // Check for each SPF group
+                foreach ($spfGroups as $spfInclude => $providers) {
+                    if (strpos($spfText, $spfInclude) !== false) {
+                        // Use the first provider as the main service (usually the most well-known)
+                        $mainProvider = $providers[0];
                         $detectedServices[] = [
-                            'name' => $provider['name'],
-                            'description' => $provider['description'],
+                            'name' => $mainProvider['name'],
+                            'description' => $mainProvider['description'],
                             'type' => 'SPF'
                         ];
-                        if ($provider['spf_include']) {
-                            $identifiedIncludes[] = $provider['spf_include'];
-                        }
+                        $identifiedIncludes[] = $spfInclude;
                     }
                 }
                 
-                // Track unidentified includes
+                // Track unidentified includes (but don't display them)
                 $unidentifiedIncludes = array_diff($includes, $identifiedIncludes);
                 if (!empty($unidentifiedIncludes)) {
                     $unidentifiedData = [];
@@ -304,15 +311,6 @@ require_once __DIR__ . '/src/Security.php';
                     
                     $unidentifiedData['last_updated'] = date('Y-m-d H:i:s');
                     file_put_contents($unidentifiedRecordsFile, json_encode($unidentifiedData, JSON_PRETTY_PRINT));
-                    
-                    // Add unidentified services to the results
-                    foreach ($unidentifiedIncludes as $include) {
-                        $detectedServices[] = [
-                            'name' => 'Unknown Service',
-                            'description' => 'SPF record: ' . $include,
-                            'type' => 'Unidentified SPF'
-                        ];
-                    }
                 }
             }
 
