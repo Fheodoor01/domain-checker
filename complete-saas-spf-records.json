@@ -1260,226 +1260,6 @@
       "description": "Incident management platform",
       "spf_include": "opsgenie.com"
     },
-     {
-      "name": "Mailfence",
-      "description": "Secure and private email service",
-      "spf_include": "mailfence.com"
-    },
-    {
-      "name": "Mailgun",
-      "description": "Email API service",
-      "spf_include": "mailgun.org"
-    },
-    {
-      "name": "Mailjet",
-      "description": "Email delivery service",
-      "spf_include": "mailjet.com"
-    },
-    {
-      "name": "MailPoet",
-      "description": "Email marketing service for WordPress",
-      "spf_include": "mailpoet.com"
-    },
-    {
-      "name": "MailTester",
-      "description": "Email testing service",
-      "spf_include": null
-    },
-    {
-      "name": "Mailtrap",
-      "description": "Email testing tool",
-      "spf_include": "mailtrap.io"
-    },
-    {
-      "name": "Majestic",
-      "description": "SEO and backlink analysis tool",
-      "spf_include": null
-    },
-    {
-      "name": "ManageEngine ServiceDesk Plus",
-      "description": "IT service management software",
-      "spf_include": "manageengine.com"
-    },
-    {
-      "name": "Mandrill",
-      "description": "Transactional email service by Mailchimp",
-      "spf_include": "spf.mandrillapp.com"
-    },
-    {
-      "name": "ManyChat",
-      "description": "Facebook Messenger marketing platform",
-      "spf_include": "manychat.com"
-    },
-    {
-      "name": "MarketMuse",
-      "description": "AI content planning and optimization platform",
-      "spf_include": null
-    },
-    {
-      "name": "Marketo",
-      "description": "Marketing automation software",
-      "spf_include": "marketo.com"
-    },
-    {
-      "name": "Mavenlink",
-      "description": "Project management software",
-      "spf_include": "mavenlink.com"
-    },
-    {
-      "name": "Medium",
-      "description": "Online publishing platform",
-      "spf_include": "medium.com"
-    },
-    {
-      "name": "MeisterTask",
-      "description": "Project and task management tool",
-      "spf_include": null
-    },
-    {
-      "name": "Mendix",
-      "description": "Low-code application development platform",
-      "spf_include": null
-    },
-    {
-      "name": "MessageBird",
-      "description": "Cloud communications platform",
-      "spf_include": "messagebird.com"
-    },
-    {
-      "name": "Microsoft 365",
-      "description": "Cloud-based productivity suite",
-      "spf_include": "spf.protection.outlook.com"
-    },
-    {
-      "name": "Microsoft Azure",
-      "description": "Cloud computing platform",
-      "spf_include": "azure.com"
-    },
-    {
-      "name": "Microsoft Dynamics 365",
-      "description": "Business applications suite",
-      "spf_include": "spf.protection.outlook.com"
-    },
-    {
-      "name": "Miro",
-      "description": "Online collaborative whiteboard platform",
-      "spf_include": "miro.com"
-    },
-    {
-      "name": "Missive",
-      "description": "Team email and chat app",
-      "spf_include": "missiveapp.com"
-    },
-    {
-      "name": "Mixpanel",
-      "description": "Product analytics platform",
-      "spf_include": null
-    },
-    {
-      "name": "MobileMonkey",
-      "description": "Chatbot marketing platform",
-      "spf_include": "mobilemonkey.com"
-    },
-    {
-      "name": "Mode Analytics",
-      "description": "Data analysis platform",
-      "spf_include": null
-    },
-    {
-      "name": "Mollie",
-      "description": "Payment service provider",
-      "spf_include": null
-    },
-    {
-      "name": "Monday.com",
-      "description": "Work management platform",
-      "spf_include": "monday.com"
-    },
-    {
-      "name": "Moodle",
-      "description": "Learning management system",
-      "spf_include": null
-    },
-    {
-      "name": "Moosend",
-      "description": "Email marketing platform",
-      "spf_include": "moosend.com"
-    },
-    {
-      "name": "Moz",
-      "description": "SEO software",
-      "spf_include": null
-    },
-    {
-      "name": "MS Project Online",
-      "description": "Project management software",
-      "spf_include": "spf.protection.outlook.com"
-    },
-    {
-      "name": "NeverBounce",
-      "description": "Email verification service",
-      "spf_include": "neverbounce.com"
-    },
-    {
-      "name": "New Relic",
-      "description": "Application performance monitoring",
-      "spf_include": "newrelic.com"
-    },
-    {
-      "name": "Newton Mail",
-      "description": "Email client",
-      "spf_include": null
-    },
-    {
-      "name": "NGDATA",
-      "description": "Customer data platform",
-      "spf_include": null
-    },
-    {
-      "name": "Notion",
-      "description": "All-in-one workspace",
-      "spf_include": "notion.so"
-    },
-    {
-      "name": "Nutshell",
-      "description": "CRM and email marketing software",
-      "spf_include": "nutshell.com"
-    },
-    {
-      "name": "Odoo",
-      "description": "Business management software",
-      "spf_include": "odoo.com"
-    },
-    {
-      "name": "Okta",
-      "description": "Identity and access management platform",
-      "spf_include": "okta.com"
-    },
-    {
-      "name": "Olark",
-      "description": "Live chat software",
-      "spf_include": "olark.com"
-    },
-    {
-      "name": "Omnisend",
-      "description": "E-commerce marketing automation platform",
-      "spf_include": "omnisend.com"
-    },
-    {
-      "name": "OneDrive",
-      "description": "Cloud storage service",
-      "spf_include": null
-    },
-    {
-      "name": "Ontoforce",
-      "description": "Data integration platform",
-      "spf_include": null
-    },
-    {
-      "name": "Opsgenie",
-      "description": "Incident management platform",
-      "spf_include": "opsgenie.com"
-    },
     {
       "name": "Optimizely",
       "description": "Digital experience platform",
@@ -1689,7 +1469,8 @@
       "name": "Schedulicity",
       "description": "Appointment scheduling software",
       "spf_include": "schedulicity.com"
-    }, {
+    },
+    {
       "name": "Schoology",
       "description": "Learning management system",
       "spf_include": "schoology.com"
@@ -2143,7 +1924,16 @@
       "name": "ZoomInfo",
       "description": "B2B contact and company database",
       "spf_include": "zoominfo.com"
+    },
+    {
+      "name": "Flexmail",
+      "description": "Email marketing and automation platform",
+      "spf_include": "spf.flexmail.eu"
+    },
+    {
+      "name": "Flowmailer",
+      "description": "Email delivery and transactional email service",
+      "spf_include": "spf.flowmailer.net"
     }
-
   ]
 }

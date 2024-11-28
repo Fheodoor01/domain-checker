@@ -263,9 +263,16 @@ require_once __DIR__ . '/src/Security.php';
         private function detectServices($spfRecord = null, $dmarcRecord = null) {
             $detectedServices = [];
             $spfProviders = json_decode(file_get_contents(__DIR__ . '/complete-saas-spf-records.json'), true)['providers'];
+            $unidentifiedRecordsFile = __DIR__ . '/unidentified_spf_records.json';
             
             if ($spfRecord && isset($spfRecord['record'])) {
                 $spfText = strtolower($spfRecord['record']);
+                
+                // Extract all include mechanisms
+                preg_match_all('/include:([^\s]+)/', $spfText, $matches);
+                $includes = $matches[1] ?? [];
+                $identifiedIncludes = [];
+                
                 foreach ($spfProviders as $provider) {
                     if ($provider['spf_include'] && 
                         (strpos($spfText, $provider['spf_include']) !== false || 
@@ -274,6 +281,36 @@ require_once __DIR__ . '/src/Security.php';
                             'name' => $provider['name'],
                             'description' => $provider['description'],
                             'type' => 'SPF'
+                        ];
+                        if ($provider['spf_include']) {
+                            $identifiedIncludes[] = $provider['spf_include'];
+                        }
+                    }
+                }
+                
+                // Track unidentified includes
+                $unidentifiedIncludes = array_diff($includes, $identifiedIncludes);
+                if (!empty($unidentifiedIncludes)) {
+                    $unidentifiedData = [];
+                    if (file_exists($unidentifiedRecordsFile)) {
+                        $unidentifiedData = json_decode(file_get_contents($unidentifiedRecordsFile), true);
+                    }
+                    
+                    foreach ($unidentifiedIncludes as $include) {
+                        if (!in_array($include, $unidentifiedData['unidentified_includes'])) {
+                            $unidentifiedData['unidentified_includes'][] = $include;
+                        }
+                    }
+                    
+                    $unidentifiedData['last_updated'] = date('Y-m-d H:i:s');
+                    file_put_contents($unidentifiedRecordsFile, json_encode($unidentifiedData, JSON_PRETTY_PRINT));
+                    
+                    // Add unidentified services to the results
+                    foreach ($unidentifiedIncludes as $include) {
+                        $detectedServices[] = [
+                            'name' => 'Unknown Service',
+                            'description' => 'SPF record: ' . $include,
+                            'type' => 'Unidentified SPF'
                         ];
                     }
                 }
