@@ -37,6 +37,9 @@ require_once __DIR__ . '/src/Security.php';
                 'bimi' => $this->checkBimi($domain)
             ];
 
+            // Detect services from SPF and DMARC records
+            $results['detected_services'] = $this->detectServices($results['spf'], $results['dmarc']);
+
             $score = $this->calculateScore($results);
             $results['overall_score'] = $score;
 
@@ -255,6 +258,49 @@ require_once __DIR__ . '/src/Security.php';
                 $this->addDebug('DANE', 'Error: ' . $e->getMessage());
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
             }
+        }
+
+        private function detectServices($spfRecord = null, $dmarcRecord = null) {
+            $detectedServices = [];
+            $spfProviders = json_decode(file_get_contents(__DIR__ . '/complete-saas-spf-records.json'), true)['providers'];
+            
+            if ($spfRecord && isset($spfRecord['record'])) {
+                $spfText = strtolower($spfRecord['record']);
+                foreach ($spfProviders as $provider) {
+                    if ($provider['spf_include'] && 
+                        (strpos($spfText, $provider['spf_include']) !== false || 
+                         strpos($spfText, strtolower($provider['name'])) !== false)) {
+                        $detectedServices[] = [
+                            'name' => $provider['name'],
+                            'description' => $provider['description'],
+                            'type' => 'SPF'
+                        ];
+                    }
+                }
+            }
+
+            // Common DMARC management services
+            $dmarcServices = [
+                'dmarcian' => 'Dmarcian',
+                'valimail' => 'Valimail',
+                'agari' => 'Agari',
+                'proofpoint' => 'Proofpoint',
+                'mimecast' => 'Mimecast'
+            ];
+
+            if ($dmarcRecord && isset($dmarcRecord['record'])) {
+                $dmarcText = strtolower($dmarcRecord['record']);
+                foreach ($dmarcServices as $keyword => $serviceName) {
+                    if (strpos($dmarcText, $keyword) !== false) {
+                        $detectedServices[] = [
+                            'name' => $serviceName,
+                            'type' => 'DMARC Management'
+                        ];
+                    }
+                }
+            }
+
+            return $detectedServices;
         }
 
         private function checkSpf($domain) {

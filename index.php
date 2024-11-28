@@ -73,9 +73,10 @@
     function generateSummary($results, $lang) {
         $strengths = [];
         $improvements = [];
+        $services = [];
 
         foreach ($results as $key => $result) {
-            if ($key === 'overall_score' || $key === 'debug') continue;
+            if ($key === 'overall_score' || $key === 'debug' || $key === 'detected_services') continue;
 
             switch ($result['status']) {
                 case 'good':
@@ -110,9 +111,24 @@
             }
         }
 
+        // Process detected services
+        if (isset($results['detected_services']) && !empty($results['detected_services'])) {
+            foreach ($results['detected_services'] as $service) {
+                $serviceInfo = $service['name'];
+                if (isset($service['description'])) {
+                    $serviceInfo .= " - {$service['description']}";
+                }
+                if (isset($service['type'])) {
+                    $serviceInfo .= " ({$service['type']})";
+                }
+                $services[] = $serviceInfo;
+            }
+        }
+
         return [
             'strengths' => $strengths,
-            'improvements' => $improvements
+            'improvements' => $improvements,
+            'services' => $services
         ];
     }
     ?>
@@ -413,33 +429,23 @@
                             <?php endif; ?>
 
                             <?php if (!empty($summary['improvements'])): ?>
-                                <div class="mb-6">
-                                    <h3 class="text-red-600 font-bold mb-3"><?php echo ucfirst($lang['improvements']); ?></h3>
-                                    <ul class="list-disc list-inside text-sm space-y-2">
+                                <div class="mt-4">
+                                    <h3 class="text-lg font-semibold mb-2"><?php echo $lang['improvements']; ?></h3>
+                                    <ul class="list-disc list-inside space-y-2">
                                         <?php foreach ($summary['improvements'] as $improvement): ?>
-                                            <li><?php echo ucfirst(trim(htmlspecialchars($improvement['message']))); ?></li>
+                                            <li class="text-red-600"><?php echo htmlspecialchars($improvement['message']); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>
+                            <?php endif; ?>
 
-                                <!-- Security Risks Section -->
-                                <div>
-                                    <h3 class="text-red-600 font-bold mb-2">Security Risks:</h3>
-                                    <ul class="list-disc list-inside text-sm">
-                                        <?php 
-                                        $shown_risks = [];
-                                        foreach ($summary['improvements'] as $improvement):
-                                            $key = $improvement['key'];
-                                            if (isset($lang['risks'][$key]) && !in_array($lang['risks'][$key], $shown_risks)):
-                                                $shown_risks[] = $lang['risks'][$key];
-                                        ?>
-                                            <li class="text-red-600">
-                                                <?php echo htmlspecialchars($lang['risks'][$key]); ?>
-                                            </li>
-                                        <?php 
-                                            endif;
-                                        endforeach; 
-                                        ?>
+                            <?php if (!empty($summary['services'])): ?>
+                                <div class="mt-4">
+                                    <h3 class="text-lg font-semibold mb-2"><?php echo $lang['detected_services'] ?? 'Detected Services'; ?></h3>
+                                    <ul class="list-disc list-inside space-y-2">
+                                        <?php foreach ($summary['services'] as $service): ?>
+                                            <li class="text-gray-700"><?php echo htmlspecialchars($service); ?></li>
+                                        <?php endforeach; ?>
                                     </ul>
                                 </div>
                             <?php endif; ?>
