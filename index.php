@@ -148,8 +148,8 @@
             }
 
             .shield-spinner {
-                width: 80px;
-                height: 80px;
+                width: 120px;
+                height: 120px;
                 position: relative;
                 display: flex;
                 justify-content: center;
@@ -161,7 +161,7 @@
                 width: 100%;
                 height: 100%;
                 border-radius: 50%;
-                border: 3px solid #4f46e5;
+                border: 4px solid #4f46e5;
                 border-top-color: transparent;
                 animation: shield-spin 1s linear infinite;
             }
