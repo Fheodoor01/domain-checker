@@ -1071,6 +1071,16 @@
       "spf_include": "mailtrap.io"
     },
     {
+      "name": "MailChannels",
+      "description": "Email delivery and relay service",
+      "spf_include": "relay.mailchannels.net"
+    },
+    {
+      "name": "Mailtrap",
+      "description": "Email testing and delivery platform",
+      "spf_include": "_spf.smtp.mailtrap.live"
+    },
+    {
       "name": "Majestic",
       "description": "SEO and backlink analysis tool",
       "spf_include": null
