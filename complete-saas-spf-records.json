@@ -1944,6 +1944,26 @@
       "name": "Flowmailer",
       "description": "Email delivery and transactional email service",
       "spf_include": "spf.flowmailer.net"
+    },
+    {
+      "name": "TransIP",
+      "description": "Domain and hosting provider with email services",
+      "spf_include": "_spf.transip.email"
+    },
+    {
+      "name": "WeFact",
+      "description": "Online invoicing and administration software",
+      "spf_include": "_spf.mijnwefact.nl"
+    },
+    {
+      "name": "SMTPeter",
+      "description": "Professional SMTP service",
+      "spf_include": "smtpeter.com"
+    },
+    {
+      "name": "Gripp",
+      "description": "Business management software",
+      "spf_include": "_spf.gripp.com"
     }
   ]
 }
