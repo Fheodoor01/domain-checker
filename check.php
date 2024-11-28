@@ -288,8 +288,7 @@ require_once __DIR__ . '/src/Security.php';
                         $mainProvider = $providers[0];
                         $detectedServices[] = [
                             'name' => $mainProvider['name'],
-                            'description' => $mainProvider['description'],
-                            'type' => 'SPF'
+                            'description' => $mainProvider['description']
                         ];
                         $identifiedIncludes[] = $spfInclude;
                     }

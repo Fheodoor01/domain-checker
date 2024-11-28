@@ -394,7 +394,7 @@
                             <div class="text-6xl font-bold <?php echo $scoreClass; ?>">
                                 <?php echo $score; ?>
                             </div>
-                            <div class="text-gray-500 mt-2"><?php echo $lang['out_of_five']; ?></div>
+                            <div class="text-gray-500 mt-2"><?php echo isset($lang['out_of_five']) ? $lang['out_of_five'] : 'out of 5'; ?></div>
                         </div>
 
                         <!-- Summary -->
@@ -407,7 +407,7 @@
                                     <h3 class="text-lg font-semibold mb-2"><?php echo $lang['detected_services'] ?? 'Detected Services'; ?></h3>
                                     <ul class="list-disc list-inside space-y-2">
                                         <?php foreach ($summary['services'] as $service): ?>
-                                            <li class="text-gray-700"><?php echo htmlspecialchars($service); ?></li>
+                                            <li class="text-blue-800"><?php echo htmlspecialchars($service); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>
