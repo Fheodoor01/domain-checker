@@ -381,20 +381,35 @@
                         <div class="text-center bg-gray-50 rounded-lg p-6">
                             <h2 class="text-2xl font-bold mb-2"><?php echo $lang['overall_score']; ?></h2>
                             <?php 
-                            $score = $results['overall_score'];
-                            $scoreClass = '';
-                            if ($score >= 4) {
-                                $scoreClass = 'text-green-600';
-                            } else if ($score >= 3) {
-                                $scoreClass = 'text-yellow-600';
-                            } else {
-                                $scoreClass = 'text-red-600';
-                            }
+                                $score = $results['overall_score'] * 20;
+                                $scoreImage = '';
+                                if ($score >= 90) {
+                                    $class = 'text-green-600';
+                                    $scoreImage = 'score_excellent.png';
+                                } elseif ($score >= 70) {
+                                    $class = 'text-green-500';
+                                    $scoreImage = 'score_good.png';
+                                } elseif ($score >= 50) {
+                                    $class = 'text-yellow-600';
+                                    $scoreImage = 'score_fair.png';
+                                } else {
+                                    $class = 'text-red-600';
+                                    $scoreImage = 'score_poor.png';
+                                }
+                                
+                                // Format score to remove decimal places if it's a whole number
+                                $displayScore = is_numeric($results['overall_score']) ? 
+                                    (floor($results['overall_score']) == $results['overall_score'] ? 
+                                        number_format($results['overall_score'], 0) : 
+                                        number_format($results['overall_score'], 2)) : 
+                                    $results['overall_score'];
                             ?>
-                            <div class="text-6xl font-bold <?php echo $scoreClass; ?>">
-                                <?php echo $score; ?>
+                            <div id="score-display">
+                                <p class="text-4xl font-bold <?php echo $class; ?> mb-4">
+                                    <span class="score-value"><?php echo $displayScore; ?></span>/5
+                                </p>
+                                <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-64 mx-auto score-image">
                             </div>
-                            <div class="text-gray-500 mt-2"><?php echo isset($lang['out_of_five']) ? $lang['out_of_five'] : 'out of 5'; ?></div>
                         </div>
 
                         <!-- Summary -->
