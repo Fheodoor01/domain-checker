@@ -118,6 +118,37 @@
         <title><?php echo $lang['title']; ?></title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
+            header {
+                background: #003366;
+                color: #fff;
+                padding: 15px 20px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            header a {
+                display: flex;
+                align-items: center;
+                height: 40px;
+            }
+            header img {
+                height: 100%;
+                width: auto;
+                object-fit: contain;
+            }
+            nav ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: flex;
+            }
+            nav ul li {
+                margin-left: 20px;
+            }
+            nav ul li a {
+                text-decoration: none;
+                color: white;
+            }
             .loading-animation {
                 position: fixed;
                 inset: 0;
@@ -130,19 +161,21 @@
 
             .shield-spinner {
                 position: relative;
-                width: 120px;
-                height: 120px;
+                width: 140px;
+                height: 140px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                margin: 0 auto;
             }
 
             .shield-image {
-                width: 80px;
-                height: 80px;
+                width: auto;
+                height: 80%;
                 position: relative;
                 z-index: 2;
                 animation: breathe 2s ease-in-out infinite;
+                object-fit: contain;
             }
 
             .spinner-ring {
@@ -243,7 +276,7 @@
 
                 <!-- Loading Animation -->
                 <div class="loading-animation hidden">
-                    <div class="bg-white rounded-lg p-8">
+                    <div class="bg-white rounded-lg p-8 flex flex-col items-center">
                         <div class="shield-spinner">
                             <div class="spinner-ring"></div>
                             <img src="images/shield.png" alt="Loading" class="shield-image">
