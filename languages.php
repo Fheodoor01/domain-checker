@@ -9,7 +9,7 @@
             'summary' => 'Summary',
             'strengths' => 'Strengths',
             'improvements' => 'Improvements Needed',
-            'risks' => 'Security Risks',
+            'risks_title' => 'Security Risks',
             'status' => [
                 'passed' => 'Passed',
                 'failed' => 'Failed',
@@ -72,7 +72,7 @@
             'summary' => 'Samenvatting',
             'strengths' => 'Sterke punten',
             'improvements' => 'Verbeterpunten',
-            'risks' => 'Veiligheidsrisico\'s',
+            'risks_title' => 'Veiligheidsrisico\'s',
             'status' => [
                 'passed' => 'Geslaagd',
                 'failed' => 'Mislukt',

@@ -393,7 +393,7 @@
 
                         <!-- Risks -->
                         <div class="bg-gray-50 rounded-lg p-6">
-                            <h2 class="text-2xl font-bold mb-4"><?php echo htmlspecialchars($lang['risks'] ?? 'Security Risks'); ?></h2>
+                            <h2 class="text-2xl font-bold mb-4"><?php echo isset($lang['risks_title']) ? htmlspecialchars($lang['risks_title']) : 'Security Risks'; ?></h2>
                             <?php
                             $risks = [];
                             $riskClassifications = [
@@ -421,7 +421,7 @@
                                         $risks[] = [
                                             'title' => isset($lang['sections'][$key]) ? (string)$lang['sections'][$key] : (string)$key,
                                             'message' => $message,
-                                            'description' => (string)($lang['risks'][$key] ?? ''),
+                                            'description' => isset($lang['risks'][$key]) ? (string)$lang['risks'][$key] : '',
                                             'classification' => (string)$riskInfo['type'],
                                             'severity' => (string)$riskInfo['severity']
                                         ];
