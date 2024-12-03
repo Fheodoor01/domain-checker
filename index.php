@@ -119,90 +119,52 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             .loading-animation {
-                display: none;
-                justify-content: center;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
                 align-items: center;
-                margin: 2rem 0;
+                justify-content: center;
+                z-index: 50;
             }
 
             .shield-spinner {
+                position: relative;
                 width: 120px;
                 height: 120px;
-                position: relative;
                 display: flex;
-                justify-content: center;
                 align-items: center;
-            }
-
-            .shield-spinner .spinner-ring {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                border-radius: 50%;
-                border: 4px solid #4f46e5;
-                border-top-color: transparent;
-                animation: shield-spin 1s linear infinite;
+                justify-content: center;
             }
 
             .shield-spinner img {
-                width: 60%;
-                height: 60%;
-                animation: shield-pulse 1.5s ease-in-out infinite;
+                width: 80px;
+                height: 80px;
+                position: relative;
+                z-index: 2;
             }
 
-            @keyframes shield-spin {
+            .spinner-ring {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                border: 4px solid transparent;
+                border-top-color: #4F46E5;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
                 to {
                     transform: rotate(360deg);
                 }
             }
 
-            @keyframes shield-pulse {
-                0% {
-                    transform: scale(1);
-                }
-                50% {
-                    transform: scale(1.1);
-                }
-                100% {
-                    transform: scale(1);
-                }
-            }
-
-            .results-container {
-                transition: opacity 0.3s ease-in-out;
-            }
-
-            .invalid-domain {
-                border-color: #ef4444 !important;
-            }
-
-            .domain-error {
-                color: #ef4444;
-                font-size: 0.875rem;
-                margin-top: 0.5rem;
-                display: none;
-                position: absolute;
-            }
-
             .input-container {
-                position: relative;
                 flex: 1;
-            }
-            
-            @keyframes pulse {
-                0% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.6;
-                }
-                100% {
-                    opacity: 1;
-                }
-            }
-            
-            .animate-pulse {
-                animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
             }
 
             /* Hide scrollbar for Chrome, Safari and Opera */
@@ -216,128 +178,6 @@
                 scrollbar-width: none;  /* Firefox */
             }
         </style>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const domainInput = document.getElementById('domain');
-                const form = document.querySelector('form');
-                const loadingAnimation = document.querySelector('.loading-animation');
-                const submitButton = form.querySelector('button[type="submit"]');
-
-                function isValidDomain(domain) {
-                    // Domain validation regex
-                    const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
-                    return domainRegex.test(domain);
-                }
-
-                function validateDomain() {
-                    const domain = domainInput.value.trim();
-                    const errorDiv = document.getElementById('domain-error');
-                    
-                    if (domain === '') {
-                        domainInput.classList.remove('invalid-domain');
-                        errorDiv.style.display = 'none';
-                        submitButton.disabled = true;
-                        return;
-                    }
-
-                    if (!isValidDomain(domain)) {
-                        domainInput.classList.add('invalid-domain');
-                        errorDiv.style.display = 'block';
-                        errorDiv.textContent = '<?php echo $lang['invalid_domain'] ?? "Please enter a valid domain name"; ?>';
-                        submitButton.disabled = true;
-                    } else {
-                        domainInput.classList.remove('invalid-domain');
-                        errorDiv.style.display = 'none';
-                        submitButton.disabled = false;
-                    }
-                }
-
-                function animateScore() {
-                    const scoreValue = document.querySelector('.score-value');
-                    const scoreImage = document.querySelector('.score-image');
-                    if (!scoreValue || !scoreImage) return;
-
-                    const finalScore = parseFloat(scoreValue.textContent);
-                    const finalImage = scoreImage.src;
-                    const images = ['score_poor.png', 'score_fair.png', 'score_good.png', 'score_excellent.png'];
-                    let currentScore = 0;
-                    let count = 0;
-                    
-                    function easeOutQuad(t) {
-                        return t * (2 - t);
-                    }
-
-                    const duration = 2000; // Animation duration in milliseconds
-                    const startTime = performance.now();
-
-                    function updateScore(currentTime) {
-                        const elapsed = currentTime - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
-                        
-                        if (progress < 1) {
-                            // Use easing function for smooth animation
-                            const easedProgress = easeOutQuad(progress);
-                            currentScore = easedProgress * finalScore;
-                            scoreValue.textContent = currentScore.toFixed(2);
-                            
-                            // Update image less frequently
-                            if (count % 5 === 0) {
-                                const imageIndex = Math.min(
-                                    Math.floor((currentScore / 5) * images.length),
-                                    images.length - 1
-                                );
-                                scoreImage.src = 'images/' + images[imageIndex];
-                            }
-                            count++;
-                            
-                            requestAnimationFrame(updateScore);
-                        } else {
-                            // Ensure we end up with the exact final values
-                            scoreValue.textContent = finalScore.toFixed(2);
-                            scoreImage.src = finalImage;
-                        }
-                    }
-
-                    requestAnimationFrame(updateScore);
-                }
-
-                function hideAllResults() {
-                    const elements = document.querySelectorAll('.results-section, .grid, .bg-red-100, [class*="rounded-lg p-6"]');
-                    elements.forEach(element => {
-                        if (element.parentElement && !element.closest('form')) {
-                            element.style.display = 'none';
-                        }
-                    });
-                }
-
-                // Validate domain on input
-                domainInput?.addEventListener('input', () => {
-                    validateDomain();
-                    hideAllResults();
-                });
-
-                // Show loading animation when form is submitted
-                form?.addEventListener('submit', function(e) {
-                    if (!isValidDomain(domainInput.value.trim())) {
-                        e.preventDefault();
-                        return;
-                    }
-                    hideAllResults();
-                    if (loadingAnimation) {
-                        loadingAnimation.style.display = 'flex';
-                    }
-                });
-
-                // Start animation if results are present on page load
-                const scoreDisplay = document.querySelector('.grid');
-                if (scoreDisplay) {
-                    setTimeout(animateScore, 100);
-                }
-
-                // Initial validation state
-                validateDomain();
-            });
-        </script>
         <link rel="stylesheet" href="assets/css/styles.css">
         <script src="assets/js/main.js" defer></script>
         <style>
@@ -383,12 +223,13 @@
                 </form>
 
                 <!-- Loading Animation -->
-                <div class="loading-animation hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div class="bg-white rounded-lg p-8 flex flex-col items-center">
-                        <div class="w-32 h-32 relative">
-                            <img src="images/loading_shield.png" alt="Loading" class="w-full h-full object-contain animate-pulse">
+                <div class="loading-animation hidden">
+                    <div class="bg-white rounded-lg p-8">
+                        <div class="shield-spinner">
+                            <div class="spinner-ring"></div>
+                            <img src="images/shield.png" alt="Loading">
                         </div>
-                        <p class="mt-4 text-lg font-semibold"><?php echo $lang['checking'] ?? 'Checking domain...'; ?></p>
+                        <p class="mt-4 text-lg font-semibold text-center"><?php echo $lang['checking'] ?? 'Checking domain...'; ?></p>
                     </div>
                 </div>
 
