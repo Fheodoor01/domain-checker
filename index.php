@@ -142,16 +142,18 @@
                 height: 80px;
                 position: relative;
                 z-index: 2;
+                animation: breathe 2s ease-in-out infinite;
             }
 
             .spinner-ring {
                 position: absolute;
                 width: 100%;
                 height: 100%;
-                border: 4px solid transparent;
+                border: 3px solid transparent;
                 border-top-color: #4F46E5;
+                border-right-color: #4F46E5;
                 border-radius: 50%;
-                animation: spin 1s linear infinite;
+                animation: spin 1.5s linear infinite;
             }
 
             @keyframes spin {
@@ -160,6 +162,18 @@
                 }
                 to {
                     transform: rotate(360deg);
+                }
+            }
+
+            @keyframes breathe {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.1);
+                }
+                100% {
+                    transform: scale(1);
                 }
             }
 
