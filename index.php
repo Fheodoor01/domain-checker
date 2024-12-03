@@ -137,7 +137,7 @@
                 justify-content: center;
             }
 
-            .shield-spinner img {
+            .shield-image {
                 width: 80px;
                 height: 80px;
                 position: relative;
@@ -202,6 +202,11 @@
         </style>
     </head>
     <body class="bg-gray-100">
+    <header>
+        <a href="https://immutec.eu/">
+            <img src="https://immutec.eu/wp-content/uploads/2024/04/logo_IMMUTEC_tagline_diap.png" alt="Immutec Logo">
+        </a>
+    </header>
         <div class="container mx-auto px-4 py-8">
             <!-- Language Selector -->
             <div class="flex justify-end mb-6">
@@ -241,7 +246,7 @@
                     <div class="bg-white rounded-lg p-8">
                         <div class="shield-spinner">
                             <div class="spinner-ring"></div>
-                            <img src="images/shield.png" alt="Loading">
+                            <img src="images/shield.png" alt="Loading" class="shield-image">
                         </div>
                         <p class="mt-4 text-lg font-semibold text-center"><?php echo $lang['checking'] ?? 'Checking domain...'; ?></p>
                     </div>
