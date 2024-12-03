@@ -188,6 +188,33 @@
                 position: relative;
                 flex: 1;
             }
+            
+            @keyframes pulse {
+                0% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.6;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+            
+            .animate-pulse {
+                animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+
+            /* Hide scrollbar for Chrome, Safari and Opera */
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+
+            /* Hide scrollbar for IE, Edge and Firefox */
+            .no-scrollbar {
+                -ms-overflow-style: none;  /* IE and Edge */
+                scrollbar-width: none;  /* Firefox */
+            }
         </style>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -356,10 +383,12 @@
                 </form>
 
                 <!-- Loading Animation -->
-                <div class="loading-animation">
-                    <div class="shield-spinner">
-                        <div class="spinner-ring"></div>
-                        <img src="images/shield.png" alt="Shield">
+                <div class="loading-animation hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-8 flex flex-col items-center">
+                        <div class="w-32 h-32 relative">
+                            <img src="images/loading_shield.png" alt="Loading" class="w-full h-full object-contain animate-pulse">
+                        </div>
+                        <p class="mt-4 text-lg font-semibold"><?php echo $lang['checking'] ?? 'Checking domain...'; ?></p>
                     </div>
                 </div>
 
@@ -385,12 +414,16 @@
                                 $score = $results['overall_score'] * 20;
                                 $scoreImage = '';
                                 if ($score >= 90) {
+                                    $class = 'text-green-600';
                                     $scoreImage = 'score_excellent.png';
                                 } elseif ($score >= 70) {
+                                    $class = 'text-green-500';
                                     $scoreImage = 'score_good.png';
                                 } elseif ($score >= 50) {
+                                    $class = 'text-yellow-600';
                                     $scoreImage = 'score_fair.png';
                                 } else {
+                                    $class = 'text-red-600';
                                     $scoreImage = 'score_poor.png';
                                 }
                                 
@@ -402,7 +435,7 @@
                                     $results['overall_score'];
                             ?>
                             <div id="score-display" class="relative">
-                                <div class="text-3xl font-bold mb-4">
+                                <div class="text-3xl font-bold mb-4 <?php echo $class; ?>">
                                     <span class="score-value"><?php echo $displayScore; ?></span>/5
                                 </div>
                                 <div class="relative w-72 h-72 mx-auto rounded-full bg-white shadow-lg p-4">
