@@ -72,7 +72,6 @@
 
     function generateSummary($results, $lang) {
         $strengths = [];
-        $improvements = [];
         $services = [];
 
         foreach ($results as $key => $result) {
@@ -87,26 +86,6 @@
                         $message .= " ({$result['strength']})";
                     }
                     $strengths[] = $message;
-                    break;
-
-                case 'bad':
-                    $message = isset($lang['messages']['implement_' . $key]) ? 
-                              $lang['messages']['implement_' . $key] : 
-                              ucfirst($key) . ' ' . $lang['status']['failed'];
-                    $improvements[] = [
-                        'message' => $message,
-                        'key' => $key
-                    ];
-                    break;
-
-                case 'warning':
-                    $message = isset($lang['messages']['improve_' . $key]) ? 
-                              $lang['messages']['improve_' . $key] : 
-                              ucfirst($key) . ' ' . $lang['status']['warning'];
-                    $improvements[] = [
-                        'message' => $message,
-                        'key' => $key
-                    ];
                     break;
             }
         }
@@ -127,7 +106,6 @@
 
         return [
             'strengths' => $strengths,
-            'improvements' => $improvements,
             'services' => $services
         ];
     }
@@ -418,12 +396,22 @@
                             <h2 class="text-2xl font-bold mb-4"><?php echo $lang['risks'] ?? 'Security Risks'; ?></h2>
                             <?php
                             $risks = [];
+                            $riskClassifications = [
+                                'spf' => 'Email Security',
+                                'dmarc' => 'Email Security',
+                                'dnssec' => 'DNS Security',
+                                'tls' => 'Transport Security',
+                                'mta_sts' => 'Email Security',
+                                'dane' => 'Transport Security'
+                            ];
+                            
                             foreach ($results as $key => $section) {
-                                if (isset($section['status']) && $section['status'] === 'bad' && isset($lang['risks'][$key])) {
+                                if (is_array($section) && isset($section['status']) && $section['status'] === 'bad' && isset($lang['risks'][$key])) {
                                     $risks[] = [
                                         'title' => $lang['sections'][$key] ?? $key,
-                                        'message' => $section['message'] ?? '',
-                                        'description' => $lang['risks'][$key],
+                                        'message' => isset($section['message']) ? (string)$section['message'] : '',
+                                        'description' => (string)$lang['risks'][$key],
+                                        'classification' => $riskClassifications[$key] ?? 'General Security',
                                         'severity' => 'high'
                                     ];
                                 }
@@ -440,8 +428,15 @@
                                 <div class="mt-4 space-y-3">
                                     <?php foreach ($risks as $risk): ?>
                                         <div class="bg-red-50 p-3 rounded-lg">
-                                            <h4 class="font-bold text-red-700"><?php echo htmlspecialchars($risk['title']); ?></h4>
-                                            <p class="text-sm text-red-600 mb-2"><?php echo htmlspecialchars($risk['message']); ?></p>
+                                            <div class="flex justify-between items-start mb-2">
+                                                <h4 class="font-bold text-red-700"><?php echo htmlspecialchars($risk['title']); ?></h4>
+                                                <span class="text-xs px-2 py-1 bg-red-200 text-red-800 rounded">
+                                                    <?php echo htmlspecialchars($risk['classification']); ?>
+                                                </span>
+                                            </div>
+                                            <?php if (!empty($risk['message'])): ?>
+                                                <p class="text-sm text-red-600 mb-2"><?php echo htmlspecialchars($risk['message']); ?></p>
+                                            <?php endif; ?>
                                             <p class="text-sm text-red-800 bg-red-100 p-2 rounded">
                                                 <strong>Security Risk:</strong> <?php echo htmlspecialchars($risk['description']); ?>
                                             </p>
@@ -473,17 +468,6 @@
                                     <ul class="list-disc list-inside space-y-2">
                                         <?php foreach ($summary['strengths'] as $strength): ?>
                                             <li class="text-green-600"><?php echo htmlspecialchars($strength); ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                </div>
-                            <?php endif; ?>
-
-                            <?php if (!empty($summary['improvements'])): ?>
-                                <div class="mt-4">
-                                    <h3 class="text-lg font-semibold mb-2"><?php echo $lang['improvements']; ?></h3>
-                                    <ul class="list-disc list-inside space-y-2">
-                                        <?php foreach ($summary['improvements'] as $improvement): ?>
-                                            <li class="text-red-600"><?php echo htmlspecialchars($improvement['message']); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>
