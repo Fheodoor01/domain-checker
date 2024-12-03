@@ -381,20 +381,16 @@
                         <!-- Score -->
                         <div class="text-center bg-gray-50 rounded-lg p-6">
                             <h2 class="text-2xl font-bold mb-2"><?php echo $lang['overall_score']; ?></h2>
-                            <?php 
+                            <?php
                                 $score = $results['overall_score'] * 20;
                                 $scoreImage = '';
                                 if ($score >= 90) {
-                                    $class = 'text-green-600';
                                     $scoreImage = 'score_excellent.png';
                                 } elseif ($score >= 70) {
-                                    $class = 'text-green-500';
                                     $scoreImage = 'score_good.png';
                                 } elseif ($score >= 50) {
-                                    $class = 'text-yellow-600';
                                     $scoreImage = 'score_fair.png';
                                 } else {
-                                    $class = 'text-red-600';
                                     $scoreImage = 'score_poor.png';
                                 }
                                 
@@ -405,11 +401,13 @@
                                         number_format($results['overall_score'], 2)) : 
                                     $results['overall_score'];
                             ?>
-                            <div id="score-display">
-                                <p class="text-4xl font-bold <?php echo $class; ?> mb-4">
+                            <div id="score-display" class="relative">
+                                <div class="text-3xl font-bold mb-4">
                                     <span class="score-value"><?php echo $displayScore; ?></span>/5
-                                </p>
-                                <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-64 mx-auto score-image">
+                                </div>
+                                <div class="relative w-72 h-72 mx-auto rounded-full bg-white shadow-lg p-4">
+                                    <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="w-full h-full object-contain score-image">
+                                </div>
                             </div>
                         </div>
 
