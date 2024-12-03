@@ -111,6 +111,33 @@ class Security {
     }
 
     /**
+     * Sanitize and validate a domain name
+     * 
+     * @param string $domain Domain name to sanitize
+     * @return string|null Sanitized domain or null if invalid
+     */
+    public function sanitizeDomain($domain) {
+        // Remove any protocol prefixes
+        $domain = preg_replace('#^https?://#', '', $domain);
+        
+        // Remove any paths or query strings
+        $domain = strtok($domain, '/');
+        
+        // Remove any port numbers
+        $domain = preg_replace('/:[\d]+$/', '', $domain);
+        
+        // Convert to lowercase
+        $domain = strtolower(trim($domain));
+        
+        // Validate domain format
+        if (!preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/', $domain)) {
+            return null;
+        }
+        
+        return $domain;
+    }
+
+    /**
      * Check HTTPS and SSL certificate status for a domain
      * 
      * @param string $domain Domain to check
