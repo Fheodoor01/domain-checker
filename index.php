@@ -230,26 +230,48 @@
                     const scoreImage = document.querySelector('.score-image');
                     if (!scoreValue || !scoreImage) return;
 
-                    const finalScore = scoreValue.textContent;
+                    const finalScore = parseFloat(scoreValue.textContent);
                     const finalImage = scoreImage.src;
                     const images = ['score_poor.png', 'score_fair.png', 'score_good.png', 'score_excellent.png'];
+                    let currentScore = 0;
                     let count = 0;
-                    const totalSteps = 15;
+                    
+                    function easeOutQuad(t) {
+                        return t * (2 - t);
+                    }
 
-                    const animation = setInterval(() => {
-                        // Animate score
-                        scoreValue.textContent = (Math.random() * 5).toFixed(2);
+                    const duration = 2000; // Animation duration in milliseconds
+                    const startTime = performance.now();
+
+                    function updateScore(currentTime) {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
                         
-                        // Animate image
-                        scoreImage.src = 'images/' + images[count % images.length];
-                        count++;
-
-                        if (count > totalSteps) {
-                            clearInterval(animation);
-                            scoreValue.textContent = finalScore;
+                        if (progress < 1) {
+                            // Use easing function for smooth animation
+                            const easedProgress = easeOutQuad(progress);
+                            currentScore = easedProgress * finalScore;
+                            scoreValue.textContent = currentScore.toFixed(2);
+                            
+                            // Update image less frequently
+                            if (count % 5 === 0) {
+                                const imageIndex = Math.min(
+                                    Math.floor((currentScore / 5) * images.length),
+                                    images.length - 1
+                                );
+                                scoreImage.src = 'images/' + images[imageIndex];
+                            }
+                            count++;
+                            
+                            requestAnimationFrame(updateScore);
+                        } else {
+                            // Ensure we end up with the exact final values
+                            scoreValue.textContent = finalScore.toFixed(2);
                             scoreImage.src = finalImage;
                         }
-                    }, 100);
+                    }
+
+                    requestAnimationFrame(updateScore);
                 }
 
                 function hideAllResults() {
