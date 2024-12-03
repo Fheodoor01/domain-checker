@@ -64,7 +64,13 @@
                 'tls' => 'Emails might be transmitted without encryption',
                 'mta_sts' => 'Email routing security could be compromised',
                 'dane' => 'TLS connections cannot be cryptographically verified',
-                'https' => 'HTTPS is not properly configured. This makes your website vulnerable to man-in-the-middle attacks.'
+                'https' => [
+                    'bad' => 'HTTPS is not properly configured. This makes your website vulnerable to man-in-the-middle attacks.',
+                    'warning' => 'Your website allows insecure HTTP access without redirecting to HTTPS. This could expose user data to interception.'
+                ]
+            ],
+            'warnings' => [
+                'https' => 'Website accessible over insecure HTTP without HTTPS redirect'
             ]
         ],
         'nl' => [
@@ -131,7 +137,13 @@
                 'tls' => 'E-mails kunnen zonder encryptie worden verzonden',
                 'mta_sts' => 'E-mailrouting beveiliging kan worden gecompromitteerd',
                 'dane' => 'TLS-verbindingen kunnen niet cryptografisch worden geverifieerd',
-                'https' => 'HTTPS is niet correct geconfigureerd. Dit maakt uw website kwetsbaar voor man-in-the-middle aanvallen.'
+                'https' => [
+                    'bad' => 'HTTPS is niet correct geconfigureerd. Dit maakt uw website kwetsbaar voor man-in-the-middle aanvallen.',
+                    'warning' => 'Uw website is toegankelijk via onveilig HTTP zonder doorverwijzing naar HTTPS. Dit kan gebruikersgegevens blootstellen aan interceptie.'
+                ]
+            ],
+            'warnings' => [
+                'https' => 'Website toegankelijk via onveilig HTTP zonder HTTPS-doorverwijzing'
             ]
         ]
     ];

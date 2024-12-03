@@ -411,17 +411,37 @@
                                         continue;
                                     }
                                     
-                                    if (is_array($section) && isset($section['status']) && $section['status'] === 'bad') {
+                                    // Add both 'bad' and 'warning' status for HTTPS checks
+                                    if (is_array($section) && isset($section['status']) && 
+                                        ($section['status'] === 'bad' || 
+                                        ($key === 'https' && $section['status'] === 'warning'))) {
+                                        
                                         $riskInfo = $riskClassifications[$key] ?? ['type' => 'General Security', 'severity' => 'Moderate'];
+                                        
+                                        // Adjust severity for HTTPS warnings
+                                        if ($key === 'https' && $section['status'] === 'warning') {
+                                            $riskInfo['severity'] = 'Moderate';
+                                        }
+                                        
                                         $message = '';
                                         if (isset($section['message'])) {
                                             $message = is_array($section['message']) ? json_encode($section['message']) : (string)$section['message'];
                                         }
                                         
+                                        // Get the appropriate risk description based on status for HTTPS
+                                        $description = '';
+                                        if ($key === 'https' && is_array($lang['risks'][$key])) {
+                                            $description = ($section['status'] === 'warning') 
+                                                ? (string)$lang['risks'][$key]['warning'] 
+                                                : (string)$lang['risks'][$key]['bad'];
+                                        } else {
+                                            $description = isset($lang['risks'][$key]) ? (string)$lang['risks'][$key] : '';
+                                        }
+                                        
                                         $risks[] = [
                                             'title' => isset($lang['sections'][$key]) ? (string)$lang['sections'][$key] : (string)$key,
                                             'message' => $message,
-                                            'description' => isset($lang['risks'][$key]) ? (string)$lang['risks'][$key] : '',
+                                            'description' => $description,
                                             'classification' => (string)$riskInfo['type'],
                                             'severity' => (string)$riskInfo['severity']
                                         ];
