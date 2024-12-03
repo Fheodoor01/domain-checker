@@ -377,7 +377,7 @@
                             <span class="block sm:inline">Domain is not valid. Please check your input and try again.</span>
                         </div>
                     <?php else: ?>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <!-- Score -->
                         <div class="text-center bg-gray-50 rounded-lg p-6">
                             <h2 class="text-2xl font-bold mb-2"><?php echo $lang['overall_score']; ?></h2>
@@ -410,6 +410,25 @@
                                     <span class="score-value"><?php echo $displayScore; ?></span>/5
                                 </p>
                                 <img src="images/<?php echo $scoreImage; ?>" alt="Score Rating" class="h-64 mx-auto score-image">
+                            </div>
+                        </div>
+
+                        <!-- Risks -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h2 class="text-2xl font-bold mb-4"><?php echo $lang['risks'] ?? 'Security Risks'; ?></h2>
+                            <?php
+                            $risks = 0;
+                            foreach ($results as $section) {
+                                if (isset($section['status']) && $section['status'] === 'bad') {
+                                    $risks++;
+                                }
+                            }
+                            ?>
+                            <div class="text-center">
+                                <div class="text-6xl font-bold <?php echo $risks > 0 ? 'text-red-600' : 'text-green-600'; ?> mb-2">
+                                    <?php echo $risks; ?>
+                                </div>
+                                <p class="text-gray-600"><?php echo $lang['risks_found'] ?? 'Security risks found'; ?></p>
                             </div>
                         </div>
 
