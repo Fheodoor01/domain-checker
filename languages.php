@@ -26,7 +26,8 @@
                 'tls' => 'TLS',
                 'tls_report' => 'TLS Report',
                 'mta_sts' => 'MTA-STS',
-                'bimi' => 'BIMI'
+                'bimi' => 'BIMI',
+                'https' => 'HTTPS Security'
             ],
             'explanations' => [
                 'nameservers' => 'Name servers are responsible for hosting your domain\'s DNS records. Multiple name servers provide redundancy.',
@@ -38,7 +39,8 @@
                 'tls' => 'TLS encryption secures email transmission between mail servers.',
                 'tls_report' => 'TLS reporting provides feedback about TLS connection successes and failures.',
                 'mta_sts' => 'MTA-STS is a mechanism enabling mail service providers to declare their ability to receive TLS-secured connections.',
-                'bimi' => 'Brand Indicators for Message Identification (BIMI) allows you to display your logo next to authenticated emails.'
+                'bimi' => 'Brand Indicators for Message Identification (BIMI) allows you to display your logo next to authenticated emails.',
+                'https' => 'HTTPS security ensures that data transmitted between your website and users is encrypted.'
             ],
             'strength' => 'Strength',
             'messages' => [
@@ -52,7 +54,8 @@
                 'enable_dnssec' => 'Enable DNSSEC to prevent DNS spoofing',
                 'configure_tls' => 'Configure TLS for email transmission',
                 'implement_mta_sts' => 'Implement MTA-STS for improved mail security',
-                'implement_bimi' => 'Consider implementing BIMI to display your logo in emails'
+                'implement_bimi' => 'Consider implementing BIMI to display your logo in emails',
+                'configure_https' => 'Configure HTTPS to secure your website\'s data transmission'
             ],
             'risks' => [
                 'spf' => 'Emails could be spoofed from your domain',
@@ -60,7 +63,8 @@
                 'dnssec' => 'Vulnerable to DNS spoofing attacks',
                 'tls' => 'Emails might be transmitted without encryption',
                 'mta_sts' => 'Email routing security could be compromised',
-                'dane' => 'TLS connections cannot be cryptographically verified'
+                'dane' => 'TLS connections cannot be cryptographically verified',
+                'https' => 'HTTPS is not properly configured. This makes your website vulnerable to man-in-the-middle attacks.'
             ]
         ],
         'nl' => [
@@ -89,7 +93,8 @@
                 'tls' => 'TLS',
                 'tls_report' => 'TLS Rapportage',
                 'mta_sts' => 'MTA-STS',
-                'bimi' => 'BIMI'
+                'bimi' => 'BIMI',
+                'https' => 'HTTPS Security'
             ],
             'explanations' => [
                 'nameservers' => 'Nameservers zijn verantwoordelijk voor het hosten van de DNS-records van uw domein. Meerdere nameservers zorgen voor redundantie.',
@@ -101,7 +106,8 @@
                 'tls' => 'TLS-encryptie beveiligt e-mailverzending tussen mailservers.',
                 'tls_report' => 'TLS-rapportage geeft feedback over successen en mislukkingen van TLS-verbindingen.',
                 'mta_sts' => 'MTA-STS is een mechanisme waarmee e-mailproviders hun mogelijkheid om TLS-beveiligde verbindingen te ontvangen kunnen declareren.',
-                'bimi' => 'Brand Indicators for Message Identification (BIMI) maakt het mogelijk om uw logo naast geverifieerde e-mails weer te geven.'
+                'bimi' => 'Brand Indicators for Message Identification (BIMI) maakt het mogelijk om uw logo naast geverifieerde e-mails weer te geven.',
+                'https' => 'HTTPS security zorgt ervoor dat gegevensoverdracht tussen uw website en gebruikers wordt versleuteld.'
             ],
             'strength' => 'Sterkte',
             'messages' => [
@@ -115,7 +121,8 @@
                 'enable_dnssec' => 'Schakel DNSSEC in om DNS-spoofing te voorkomen',
                 'configure_tls' => 'Configureer TLS voor e-mailverzending',
                 'implement_mta_sts' => 'Implementeer MTA-STS voor verbeterde mailbeveiliging',
-                'implement_bimi' => 'Overweeg BIMI te implementeren om uw logo in e-mails weer te geven'
+                'implement_bimi' => 'Overweeg BIMI te implementeren om uw logo in e-mails weer te geven',
+                'configure_https' => 'Configureer HTTPS om uw website\'s gegevensoverdracht te beveiligen'
             ],
             'risks' => [
                 'spf' => 'E-mails kunnen worden vervalst vanaf uw domein',
@@ -123,7 +130,8 @@
                 'dnssec' => 'Kwetsbaar voor DNS-spoofing aanvallen',
                 'tls' => 'E-mails kunnen zonder encryptie worden verzonden',
                 'mta_sts' => 'E-mailrouting beveiliging kan worden gecompromitteerd',
-                'dane' => 'TLS-verbindingen kunnen niet cryptografisch worden geverifieerd'
+                'dane' => 'TLS-verbindingen kunnen niet cryptografisch worden geverifieerd',
+                'https' => 'HTTPS is niet correct geconfigureerd. Dit maakt uw website kwetsbaar voor man-in-the-middle aanvallen.'
             ]
         ]
     ];

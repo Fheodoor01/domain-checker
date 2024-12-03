@@ -109,4 +109,95 @@ class Security {
         
         return $domain;
     }
+
+    /**
+     * Check HTTPS and SSL certificate status for a domain
+     * 
+     * @param string $domain Domain to check
+     * @return array Result of the HTTPS and certificate check
+     */
+    public function checkHttps($domain) {
+        $result = [
+            'status' => 'unknown',
+            'message' => '',
+            'details' => []
+        ];
+
+        // Try HTTPS connection
+        $ctx = stream_context_create([
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+                'capture_peer_cert' => true
+            ]
+        ]);
+
+        $url = "https://" . $domain;
+        $errno = 0;
+        $errstr = '';
+        
+        // First check if HTTPS is available
+        $handle = @stream_socket_client(
+            "ssl://{$domain}:443", 
+            $errno, 
+            $errstr, 
+            30, 
+            STREAM_CLIENT_CONNECT, 
+            $ctx
+        );
+
+        if (!$handle) {
+            $result['status'] = 'bad';
+            $result['message'] = "HTTPS not properly configured";
+            $result['details'][] = "Unable to establish secure connection: $errstr";
+            return $result;
+        }
+
+        // Get certificate details
+        $cert = stream_context_get_params($handle);
+        if (isset($cert['options']['ssl']['peer_certificate'])) {
+            $certInfo = openssl_x509_parse($cert['options']['ssl']['peer_certificate']);
+            
+            // Check certificate validity
+            $validFrom = $certInfo['validFrom_time_t'];
+            $validTo = $certInfo['validTo_time_t'];
+            $now = time();
+            
+            if ($now < $validFrom) {
+                $result['status'] = 'bad';
+                $result['message'] = "SSL certificate not yet valid";
+            } elseif ($now > $validTo) {
+                $result['status'] = 'bad';
+                $result['message'] = "SSL certificate has expired";
+            } else {
+                // Check if HTTP redirects to HTTPS
+                $httpHandle = @fopen("http://{$domain}", 'r');
+                if ($httpHandle) {
+                    $meta = stream_get_meta_data($httpHandle);
+                    $headers = implode("\n", $meta['wrapper_data']);
+                    fclose($httpHandle);
+                    
+                    if (strpos($headers, 'Location: https://') === false) {
+                        $result['status'] = 'warning';
+                        $result['message'] = "HTTP not redirecting to HTTPS";
+                        $result['details'][] = "Site accessible over HTTP without HTTPS redirect";
+                    } else {
+                        $result['status'] = 'good';
+                        $result['message'] = "HTTPS properly configured";
+                        $result['details'][] = "Valid SSL certificate until " . date('Y-m-d', $validTo);
+                    }
+                } else {
+                    $result['status'] = 'good';
+                    $result['message'] = "HTTPS properly configured";
+                    $result['details'][] = "Valid SSL certificate until " . date('Y-m-d', $validTo);
+                }
+            }
+        } else {
+            $result['status'] = 'bad';
+            $result['message'] = "Invalid SSL certificate";
+        }
+
+        fclose($handle);
+        return $result;
+    }
 }

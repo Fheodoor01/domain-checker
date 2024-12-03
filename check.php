@@ -19,13 +19,11 @@ require_once __DIR__ . '/src/Logger.php';
             $this->debug = []; // Reset debug info
             
             // Check nameservers first
-            $command = sprintf('dig +short NS %s', escapeshellarg($domain));
-            $output = Security::safeExecute('dig', ['+short', 'NS', $domain])['output'];
+            $security = new Security();
+            $domain = $security->sanitizeDomain($domain);
             
-            if (empty(trim($output ?? ''))) {
-                // No nameservers found, domain likely doesn't exist
-                $this->logger->logCheck($domain, 'Error: Domain does not exist');
-                return 'Error: Domain does not exist';
+            if (empty($domain)) {
+                return "Invalid domain provided";
             }
             
             $results = [
@@ -38,7 +36,8 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls' => $this->checkTls($domain),
                 'tls_report' => $this->checkTlsReport($domain),
                 'mta_sts' => $this->checkMtaSts($domain),
-                'bimi' => $this->checkBimi($domain)
+                'bimi' => $this->checkBimi($domain),
+                'https' => $security->checkHttps($domain)  // Add HTTPS check
             ];
 
             // Detect services from SPF and DMARC records
@@ -73,7 +72,8 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls' => 0.5,
                 'tls_report' => 0.25,
                 'mta_sts' => 0.25,
-                'bimi' => 0.25
+                'bimi' => 0.25,
+                'https' => 0.5  // Add HTTPS weight
             ];
 
             $score = 0;
