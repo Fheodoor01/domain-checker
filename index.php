@@ -405,16 +405,22 @@
                                 'dane' => ['type' => 'Transport Security', 'severity' => 'High']
                             ];
                             
-                            foreach ($results as $key => $section) {
-                                if (is_array($section) && isset($section['status']) && $section['status'] === 'bad' && isset($lang['risks'][$key])) {
-                                    $riskInfo = $riskClassifications[$key] ?? ['type' => 'General Security', 'severity' => 'Moderate'];
-                                    $risks[] = [
-                                        'title' => $lang['sections'][$key] ?? $key,
-                                        'message' => isset($section['message']) ? (string)$section['message'] : '',
-                                        'description' => (string)$lang['risks'][$key],
-                                        'classification' => $riskInfo['type'],
-                                        'severity' => $riskInfo['severity']
-                                    ];
+                            if (is_array($results)) {
+                                foreach ($results as $key => $section) {
+                                    if (!is_string($key) || !isset($lang['risks'][$key])) {
+                                        continue;
+                                    }
+                                    
+                                    if (is_array($section) && isset($section['status']) && $section['status'] === 'bad') {
+                                        $riskInfo = $riskClassifications[$key] ?? ['type' => 'General Security', 'severity' => 'Moderate'];
+                                        $risks[] = [
+                                            'title' => isset($lang['sections'][$key]) ? (string)$lang['sections'][$key] : (string)$key,
+                                            'message' => isset($section['message']) ? (string)$section['message'] : '',
+                                            'description' => (string)$lang['risks'][$key],
+                                            'classification' => (string)$riskInfo['type'],
+                                            'severity' => (string)$riskInfo['severity']
+                                        ];
+                                    }
                                 }
                             }
                             $riskCount = count($risks);
