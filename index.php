@@ -397,26 +397,43 @@
                             <?php
                             $risks = [];
                             $riskClassifications = [
-                                'spf' => 'Email Security',
-                                'dmarc' => 'Email Security',
-                                'dnssec' => 'DNS Security',
-                                'tls' => 'Transport Security',
-                                'mta_sts' => 'Email Security',
-                                'dane' => 'Transport Security'
+                                'spf' => ['type' => 'Email Security', 'severity' => 'Critical'],
+                                'dmarc' => ['type' => 'Email Security', 'severity' => 'Critical'],
+                                'dnssec' => ['type' => 'DNS Security', 'severity' => 'Severe'],
+                                'tls' => ['type' => 'Transport Security', 'severity' => 'High'],
+                                'mta_sts' => ['type' => 'Email Security', 'severity' => 'Moderate'],
+                                'dane' => ['type' => 'Transport Security', 'severity' => 'High']
                             ];
                             
                             foreach ($results as $key => $section) {
                                 if (is_array($section) && isset($section['status']) && $section['status'] === 'bad' && isset($lang['risks'][$key])) {
+                                    $riskInfo = $riskClassifications[$key] ?? ['type' => 'General Security', 'severity' => 'Moderate'];
                                     $risks[] = [
                                         'title' => $lang['sections'][$key] ?? $key,
                                         'message' => isset($section['message']) ? (string)$section['message'] : '',
                                         'description' => (string)$lang['risks'][$key],
-                                        'classification' => $riskClassifications[$key] ?? 'General Security',
-                                        'severity' => 'high'
+                                        'classification' => $riskInfo['type'],
+                                        'severity' => $riskInfo['severity']
                                     ];
                                 }
                             }
                             $riskCount = count($risks);
+
+                            // Function to get severity color classes
+                            function getSeverityClasses($severity) {
+                                switch ($severity) {
+                                    case 'Critical':
+                                        return ['bg-red-200 text-red-900', 'bg-red-100'];
+                                    case 'Severe':
+                                        return ['bg-orange-200 text-orange-900', 'bg-orange-100'];
+                                    case 'High':
+                                        return ['bg-yellow-200 text-yellow-900', 'bg-yellow-100'];
+                                    case 'Moderate':
+                                        return ['bg-blue-200 text-blue-900', 'bg-blue-100'];
+                                    default:
+                                        return ['bg-gray-200 text-gray-900', 'bg-gray-100'];
+                                }
+                            }
                             ?>
                             <div class="text-center mb-4">
                                 <div class="text-6xl font-bold <?php echo $riskCount > 0 ? 'text-red-600' : 'text-green-600'; ?> mb-2">
@@ -426,18 +443,25 @@
                             </div>
                             <?php if ($riskCount > 0): ?>
                                 <div class="mt-4 space-y-3">
-                                    <?php foreach ($risks as $risk): ?>
+                                    <?php foreach ($risks as $risk): 
+                                        $severityClasses = getSeverityClasses($risk['severity']);
+                                    ?>
                                         <div class="bg-red-50 p-3 rounded-lg">
                                             <div class="flex justify-between items-start mb-2">
                                                 <h4 class="font-bold text-red-700"><?php echo htmlspecialchars($risk['title']); ?></h4>
-                                                <span class="text-xs px-2 py-1 bg-red-200 text-red-800 rounded">
-                                                    <?php echo htmlspecialchars($risk['classification']); ?>
-                                                </span>
+                                                <div class="flex gap-2">
+                                                    <span class="text-xs px-2 py-1 <?php echo $severityClasses[0]; ?> rounded">
+                                                        <?php echo htmlspecialchars($risk['severity']); ?>
+                                                    </span>
+                                                    <span class="text-xs px-2 py-1 bg-gray-200 text-gray-800 rounded">
+                                                        <?php echo htmlspecialchars($risk['classification']); ?>
+                                                    </span>
+                                                </div>
                                             </div>
                                             <?php if (!empty($risk['message'])): ?>
                                                 <p class="text-sm text-red-600 mb-2"><?php echo htmlspecialchars($risk['message']); ?></p>
                                             <?php endif; ?>
-                                            <p class="text-sm text-red-800 bg-red-100 p-2 rounded">
+                                            <p class="text-sm text-red-800 <?php echo $severityClasses[1]; ?> p-2 rounded">
                                                 <strong>Security Risk:</strong> <?php echo htmlspecialchars($risk['description']); ?>
                                             </p>
                                         </div>
