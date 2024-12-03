@@ -418,52 +418,13 @@
                             <h2 class="text-2xl font-bold mb-4"><?php echo $lang['risks'] ?? 'Security Risks'; ?></h2>
                             <?php
                             $risks = [];
-                            $riskDescriptions = [
-                                'spf' => [
-                                    'title' => 'Email Spoofing Risk',
-                                    'desc' => 'Attackers could send emails pretending to be from your domain, potentially damaging your reputation and enabling phishing attacks.',
-                                    'severity' => 'high'
-                                ],
-                                'dmarc' => [
-                                    'title' => 'Email Fraud Risk',
-                                    'desc' => 'Your domain is vulnerable to email fraud and impersonation. Recipients cannot verify if emails are legitimately from your domain.',
-                                    'severity' => 'high'
-                                ],
-                                'dnssec' => [
-                                    'title' => 'DNS Hijacking Risk',
-                                    'desc' => 'Your DNS records could be tampered with, potentially redirecting traffic to malicious servers.',
-                                    'severity' => 'high'
-                                ],
-                                'mx' => [
-                                    'title' => 'Email Routing Risk',
-                                    'desc' => 'Email delivery might be unreliable or vulnerable to interception.',
-                                    'severity' => 'medium'
-                                ],
-                                'https' => [
-                                    'title' => 'Connection Security Risk',
-                                    'desc' => 'Website traffic could be intercepted or manipulated by attackers.',
-                                    'severity' => 'high'
-                                ],
-                                'headers' => [
-                                    'title' => 'Web Security Risk',
-                                    'desc' => 'Your website might be vulnerable to various attacks like XSS, clickjacking, or information disclosure.',
-                                    'severity' => 'medium'
-                                ]
-                            ];
-
                             foreach ($results as $key => $section) {
-                                if (isset($section['status']) && $section['status'] === 'bad') {
-                                    $riskInfo = $riskDescriptions[$key] ?? [
-                                        'title' => $lang['sections'][$key] ?? $key,
-                                        'desc' => $section['message'] ?? 'Security configuration issue detected.',
-                                        'severity' => 'medium'
-                                    ];
-                                    
+                                if (isset($section['status']) && $section['status'] === 'bad' && isset($lang['risks'][$key])) {
                                     $risks[] = [
-                                        'title' => $riskInfo['title'],
+                                        'title' => $lang['sections'][$key] ?? $key,
                                         'message' => $section['message'] ?? '',
-                                        'description' => $riskInfo['desc'],
-                                        'severity' => $riskInfo['severity']
+                                        'description' => $lang['risks'][$key],
+                                        'severity' => 'high'
                                     ];
                                 }
                             }
@@ -482,11 +443,8 @@
                                             <h4 class="font-bold text-red-700"><?php echo htmlspecialchars($risk['title']); ?></h4>
                                             <p class="text-sm text-red-600 mb-2"><?php echo htmlspecialchars($risk['message']); ?></p>
                                             <p class="text-sm text-red-800 bg-red-100 p-2 rounded">
-                                                <strong>Security Impact:</strong> <?php echo htmlspecialchars($risk['description']); ?>
+                                                <strong>Security Risk:</strong> <?php echo htmlspecialchars($risk['description']); ?>
                                             </p>
-                                            <span class="inline-block mt-2 text-xs px-2 py-1 rounded <?php echo $risk['severity'] === 'high' ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'; ?>">
-                                                <?php echo ucfirst($risk['severity']); ?> Risk
-                                            </span>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
