@@ -417,19 +417,37 @@
                         <div class="bg-gray-50 rounded-lg p-6">
                             <h2 class="text-2xl font-bold mb-4"><?php echo $lang['risks'] ?? 'Security Risks'; ?></h2>
                             <?php
-                            $risks = 0;
-                            foreach ($results as $section) {
+                            $risks = [];
+                            foreach ($results as $key => $section) {
                                 if (isset($section['status']) && $section['status'] === 'bad') {
-                                    $risks++;
+                                    $risks[] = [
+                                        'title' => $lang['sections'][$key] ?? $key,
+                                        'message' => $section['message'] ?? '',
+                                        'severity' => isset($section['severity']) ? $section['severity'] : 'high'
+                                    ];
                                 }
                             }
+                            $riskCount = count($risks);
                             ?>
-                            <div class="text-center">
-                                <div class="text-6xl font-bold <?php echo $risks > 0 ? 'text-red-600' : 'text-green-600'; ?> mb-2">
-                                    <?php echo $risks; ?>
+                            <div class="text-center mb-4">
+                                <div class="text-6xl font-bold <?php echo $riskCount > 0 ? 'text-red-600' : 'text-green-600'; ?> mb-2">
+                                    <?php echo $riskCount; ?>
                                 </div>
                                 <p class="text-gray-600"><?php echo $lang['risks_found'] ?? 'Security risks found'; ?></p>
                             </div>
+                            <?php if ($riskCount > 0): ?>
+                                <div class="mt-4 space-y-3">
+                                    <?php foreach ($risks as $risk): ?>
+                                        <div class="bg-red-50 p-3 rounded-lg">
+                                            <h4 class="font-bold text-red-700"><?php echo htmlspecialchars($risk['title']); ?></h4>
+                                            <p class="text-sm text-red-600"><?php echo htmlspecialchars($risk['message']); ?></p>
+                                            <span class="inline-block mt-1 text-xs px-2 py-1 rounded <?php echo $risk['severity'] === 'high' ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'; ?>">
+                                                <?php echo ucfirst($risk['severity']); ?> Risk
+                                            </span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Summary -->
