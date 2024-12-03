@@ -22,8 +22,19 @@ require_once __DIR__ . '/src/Logger.php';
             $security = new Security();
             $domain = $security->sanitizeDomain($domain);
             
-            if (empty($domain)) {
+            if ($domain === null) {
+                $this->logger->logCheck($domain, 'Error: Invalid domain provided');
                 return "Invalid domain provided";
+            }
+            
+            // Check if domain exists
+            $command = sprintf('dig +short NS %s', escapeshellarg($domain));
+            $output = Security::safeExecute('dig', ['+short', 'NS', $domain])['output'];
+            
+            if (empty(trim($output ?? ''))) {
+                // No nameservers found, domain likely doesn't exist
+                $this->logger->logCheck($domain, 'Error: Domain does not exist');
+                return 'Error: Domain does not exist';
             }
             
             $results = [
