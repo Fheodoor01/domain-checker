@@ -55,6 +55,46 @@ require_once __DIR__ . '/src/Logger.php';
             // Detect services from SPF and DMARC records
             $results['detected_services'] = $this->detectServices($results['spf'], $results['dmarc']);
 
+            // Process reverse DNS results
+            if (isset($results['reverse_dns'])) {
+                $reverse_dns = $results['reverse_dns'];
+                if (!$reverse_dns['status']) {
+                    if ($reverse_dns['score'] == 0) {
+                        $results['risks'][] = 'Reverse DNS not configured';
+                        $results['improvements'][] = 'Configure reverse DNS';
+                    } elseif ($reverse_dns['score'] < 1) {
+                        $results['warnings'][] = implode(', ', array_map(function($detail) {
+                            return $detail['message'];
+                        }, array_filter($reverse_dns['details'], function($detail) {
+                            return $detail['type'] === 'warning';
+                        })));
+                        $results['improvements'][] = 'Configure reverse DNS';
+                    }
+                } else {
+                    $results['strengths'][] = 'Reverse DNS configured';
+                }
+            }
+
+            // Process HTTPS results
+            if (isset($results['https'])) {
+                $https = $results['https'];
+                if (!$https['status']) {
+                    if ($https['score'] == 0) {
+                        $results['risks'][] = 'HTTPS not configured';
+                        $results['improvements'][] = 'Configure HTTPS';
+                    } elseif ($https['score'] < 1) {
+                        $results['warnings'][] = implode(', ', array_map(function($detail) {
+                            return $detail['message'];
+                        }, array_filter($https['details'], function($detail) {
+                            return $detail['type'] === 'warning';
+                        })));
+                        $results['improvements'][] = 'Configure HTTPS';
+                    }
+                } else {
+                    $results['strengths'][] = 'HTTPS configured';
+                }
+            }
+
             $score = $this->calculateScore($results);
             $results['overall_score'] = $score;
 

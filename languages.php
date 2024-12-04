@@ -68,15 +68,24 @@
             ],
             'risks' => [
                 'spf' => 'Emails could be spoofed from your domain',
-                'dmarc' => 'No policy for handling failed email authentication',
-                'dnssec' => 'Vulnerable to DNS spoofing attacks',
-                'tls' => 'Emails might be transmitted without encryption',
-                'mta_sts' => 'Email routing security could be compromised',
-                'dane' => 'TLS connections cannot be cryptographically verified',
-                'https' => [
-                    'bad' => 'HTTPS is not properly configured. This makes your website vulnerable to man-in-the-middle attacks.',
-                    'warning' => 'Your website allows insecure HTTP access without redirecting to HTTPS. This could expose user data to interception.'
-                ]
+                'dmarc' => 'Your domain is vulnerable to email spoofing',
+                'dkim' => 'Emails may be marked as spam',
+                'https' => 'Your website is not secure',
+                'reverse_dns' => 'Mail servers may reject your emails'
+            ],
+            'improvements' => [
+                'configure_spf' => 'Configure SPF to prevent email spoofing',
+                'configure_dmarc' => 'Configure DMARC for better email security',
+                'configure_dkim' => 'Configure DKIM to improve email deliverability',
+                'configure_https' => 'Configure HTTPS to secure your website\'s data transmission',
+                'configure_reverse_dns' => 'Configure reverse DNS for your mail servers'
+            ],
+            'strengths' => [
+                'spf_configured' => 'SPF is properly configured',
+                'dmarc_configured' => 'DMARC is properly configured',
+                'dkim_configured' => 'DKIM is properly configured',
+                'https_configured' => 'HTTPS is properly configured',
+                'reverse_dns_configured' => 'Reverse DNS is properly configured'
             ],
             'warnings' => [
                 'https' => 'Website accessible over insecure HTTP without HTTPS redirect'
@@ -131,7 +140,7 @@
                 'nameservers_redundant' => 'Meerdere nameservers zorgen voor goede redundantie',
                 'dnssec_enabled' => 'DNSSEC is ingeschakeld, beschermt tegen DNS-spoofing',
                 'tls_configured' => 'TLS is correct geconfigureerd voor e-mailbeveiliging',
-                'implement_spf' => 'Implementeer SPF om e-mail spoofing te voorkomen',
+                'implement_spf' => 'Implementeer SPF om e-mail vervalsing te voorkomen',
                 'implement_dmarc' => 'Implementeer DMARC om e-mailverificatie te verbeteren',
                 'enable_dnssec' => 'Schakel DNSSEC in om DNS-spoofing te voorkomen',
                 'configure_tls' => 'Configureer TLS voor e-mailverzending',
@@ -150,15 +159,24 @@
             ],
             'risks' => [
                 'spf' => 'E-mails kunnen worden vervalst vanaf uw domein',
-                'dmarc' => 'Geen beleid voor het afhandelen van mislukte e-mailverificatie',
-                'dnssec' => 'Kwetsbaar voor DNS-spoofing aanvallen',
-                'tls' => 'E-mails kunnen zonder encryptie worden verzonden',
-                'mta_sts' => 'E-mailrouting beveiliging kan worden gecompromitteerd',
-                'dane' => 'TLS-verbindingen kunnen niet cryptografisch worden geverifieerd',
-                'https' => [
-                    'bad' => 'HTTPS is niet correct geconfigureerd. Dit maakt uw website kwetsbaar voor man-in-the-middle aanvallen.',
-                    'warning' => 'Uw website is toegankelijk via onveilig HTTP zonder doorverwijzing naar HTTPS. Dit kan gebruikersgegevens blootstellen aan interceptie.'
-                ]
+                'dmarc' => 'Uw domein is kwetsbaar voor e-mail vervalsing',
+                'dkim' => 'E-mails kunnen als spam worden gemarkeerd',
+                'https' => 'Uw website is niet veilig',
+                'reverse_dns' => 'Mailservers kunnen uw e-mails weigeren'
+            ],
+            'improvements' => [
+                'configure_spf' => 'Configureer SPF om e-mail vervalsing te voorkomen',
+                'configure_dmarc' => 'Configureer DMARC voor betere e-mailbeveiliging',
+                'configure_dkim' => 'Configureer DKIM om e-mail bezorging te verbeteren',
+                'configure_https' => 'Configureer HTTPS om uw website\'s gegevensoverdracht te beveiligen',
+                'configure_reverse_dns' => 'Configureer reverse DNS voor uw mailservers'
+            ],
+            'strengths' => [
+                'spf_configured' => 'SPF is correct geconfigureerd',
+                'dmarc_configured' => 'DMARC is correct geconfigureerd',
+                'dkim_configured' => 'DKIM is correct geconfigureerd',
+                'https_configured' => 'HTTPS is correct geconfigureerd',
+                'reverse_dns_configured' => 'Reverse DNS is correct geconfigureerd'
             ],
             'warnings' => [
                 'https' => 'Website toegankelijk via onveilig HTTP zonder HTTPS-doorverwijzing'
