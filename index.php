@@ -171,7 +171,7 @@
 
             .shield-image {
                 width: auto;
-                height: 80%;
+                height: 70%;
                 position: relative;
                 z-index: 2;
                 animation: breathe 2s ease-in-out infinite;
@@ -550,32 +550,27 @@
     </body>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const testNames = [
-                'Checking nameservers...',
-                'Checking SMTP...',
-                'Checking DNSSEC...',
-                'Checking SPF...',
-                'Checking DMARC...',
-                'Checking DANE...',
-                'Checking TLS...',
-                'Checking TLS Report...',
-                'Checking MTA-STS...',
-                'Checking BIMI...',
-                'Checking HTTPS...',
-                'Checking Reverse DNS...',
-                'Checking CAA...',
-                'Checking DDoS Protection...'
-            ];
+            const testNameInterval = 350;
+            const minimumLoadingTime = 2500;
+            let testNameIndex = 0;
+            const testNames = ["Nameservers", "SMTP", "DNSSEC", "SPF", "DMARC", "DANE", "TLS", "TLS Report", "MTA-STS", "BIMI", "HTTPS", "Reverse DNS", "CAA", "DDoS Protection"];
 
-            let currentIndex = 0;
-            const loadingText = document.querySelector('.loading-animation p');
-
-            function updateLoadingText() {
-                loadingText.textContent = testNames[currentIndex];
-                currentIndex = (currentIndex + 1) % testNames.length;
+            function cycleTestNames() {
+                const testNameElement = document.getElementById('loading-text');
+                if (testNameElement) {
+                    testNameElement.textContent = `Checking ${testNames[testNameIndex]}...`;
+                    testNameIndex = (testNameIndex + 1) % testNames.length;
+                }
             }
 
-            setInterval(updateLoadingText, 400);
+            // Start cycling test names
+            const testNameCycling = setInterval(cycleTestNames, testNameInterval);
+
+            // Wait for at least 2.5 seconds before showing results
+            setTimeout(() => {
+                clearInterval(testNameCycling);
+                document.querySelector('.loading-animation').classList.add('hidden');
+            }, minimumLoadingTime);
         });
     </script>
     </html>
