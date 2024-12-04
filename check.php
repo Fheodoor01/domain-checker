@@ -9,6 +9,7 @@ require_once __DIR__ . '/src/Logger.php';
         private $config;
         private $debug = [];
         private $logger;
+        private $security_risks = [];
         
         public function __construct($config) {
             $this->config = $config;
@@ -17,6 +18,7 @@ require_once __DIR__ . '/src/Logger.php';
         
         public function checkAll($domain) {
             $this->debug = []; // Reset debug info
+            $this->security_risks = []; // Reset security risks
             
             // Check nameservers first
             $security = new Security();
@@ -62,7 +64,13 @@ require_once __DIR__ . '/src/Logger.php';
             // Log the check with results
             $this->logger->logCheck($domain, $results);
 
-            return $results;
+            return [
+                'score' => round($score / 5 * 100),
+                'results' => $results,
+                'services' => $results['detected_services'],
+                'security_risks' => $this->security_risks,
+                'debug' => $this->debug
+            ];
         }
 
         private function addDebug($check, $message, $data = null) {
@@ -506,10 +514,25 @@ require_once __DIR__ . '/src/Logger.php';
                     }
                 }
                 return ['status' => 'bad', 'message' => 'No BIMI record found'];
-            } catch (Exception $e) {
-                $this->addDebug('BIMI', 'Error: ' . $e->getMessage());
+            } catch (\Exception $e) {
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
             }
+        }
+
+        /**
+         * Add a security risk to the results
+         * 
+         * @param string $title Short title of the security risk
+         * @param string $description Detailed description of the risk
+         */
+        private function addSecurityRisk($title, $description) {
+            if (!isset($this->security_risks)) {
+                $this->security_risks = [];
+            }
+            $this->security_risks[] = [
+                'title' => $title,
+                'description' => $description
+            ];
         }
 
         private function checkReverseDNS($domain) {
