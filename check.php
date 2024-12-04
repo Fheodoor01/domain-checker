@@ -59,8 +59,6 @@ require_once __DIR__ . '/src/Logger.php';
             $services = $this->detectServices($results['spf'], $results['dmarc']);
 
             $score = $this->calculateScore($results);
-            $score = round($score / array_sum($this->calculateScore($results)) * 100);
-            
             $results['overall_score'] = $score;
             $results['detected_services'] = $services;
             $results['security_risks'] = $this->security_risks;
@@ -86,8 +84,8 @@ require_once __DIR__ . '/src/Logger.php';
                 'nameservers' => 0.5,
                 'smtp' => 0.5,
                 'dnssec' => 0.5,
-                'spf' => 0.5,
-                'dmarc' => 0.5,
+                'spf' => 0.75,
+                'dmarc' => 0.75,
                 'dane' => 0.25,
                 'tls' => 0.5,
                 'tls_report' => 0.25,
@@ -99,18 +97,18 @@ require_once __DIR__ . '/src/Logger.php';
             ];
 
             $score = 0;
-            $total_weight = array_sum($weights);
+            $totalWeight = 0;
 
             foreach ($weights as $check => $weight) {
-                if (isset($results[$check]) && isset($results[$check]['status'])) {
-                    if ($results[$check]['status'] === true || $results[$check]['status'] === 'good') {
+                if (isset($results[$check]['status'])) {
+                    $totalWeight += $weight;
+                    if ($results[$check]['status'] === 'good' || $results[$check]['status'] === true) {
                         $score += $weight;
                     }
                 }
             }
 
-            $score = round($score / $total_weight * 5);
-            return $score;
+            return number_format(($score / $totalWeight) * 5, 2);
         }
 
         private function checkNameservers($domain) {
