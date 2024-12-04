@@ -184,7 +184,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                border: 8px solid rgba(0, 0, 0, 0.1);
+                border: 10.4px solid rgba(0, 0, 0, 0.1);
                 border-top-color: #3498db;
                 border-radius: 50%;
                 animation: spin 1s linear infinite;
