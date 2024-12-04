@@ -77,7 +77,7 @@
         foreach ($results as $key => $result) {
             if ($key === 'overall_score' || $key === 'debug' || $key === 'detected_services') continue;
 
-            switch ($result['status']) {
+            switch ($result['status'] ?? 'unknown') {
                 case 'good':
                     $message = isset($lang['messages'][$key . '_configured']) ? 
                               $lang['messages'][$key . '_configured'] : 
