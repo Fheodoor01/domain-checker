@@ -60,7 +60,9 @@ class Security {
         $allowed_commands = [
             'dig',
             'host',
-            'nslookup'
+            'nslookup',
+            'gethostbyaddr',
+            'gethostbynamel'
         ];
         
         $command = basename($command);

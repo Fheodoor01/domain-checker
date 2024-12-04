@@ -48,7 +48,9 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls_report' => $this->checkTlsReport($domain),
                 'mta_sts' => $this->checkMtaSts($domain),
                 'bimi' => $this->checkBimi($domain),
-                'https' => $security->checkHttps($domain)  // Add HTTPS check
+                'https' => $security->checkHttps($domain),  // Add HTTPS check
+                'reverse_dns' => $this->checkReverseDNS($domain),
+                'caa' => $this->checkCAA($domain)
             ];
 
             // Detect services from SPF and DMARC records
@@ -84,7 +86,9 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls_report' => 0.25,
                 'mta_sts' => 0.25,
                 'bimi' => 0.25,
-                'https' => 0.5  // Add HTTPS weight
+                'https' => 0.5,  // Add HTTPS weight
+                'reverse_dns' => 0.25,
+                'caa' => 0.25
             ];
 
             $score = 0;
@@ -506,6 +510,67 @@ require_once __DIR__ . '/src/Logger.php';
                 $this->addDebug('BIMI', 'Error: ' . $e->getMessage());
                 return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
             }
+        }
+
+        private function checkReverseDNS($domain) {
+            $result = ['status' => false, 'details' => []];
+            
+            // Get MX records
+            $mx_records = dns_get_record($domain, DNS_MX);
+            if (empty($mx_records)) {
+                $result['details'][] = "No MX records found";
+                return $result;
+            }
+            
+            $all_valid = true;
+            foreach ($mx_records as $mx) {
+                $ip_addresses = gethostbynamel($mx['target']);
+                if (!$ip_addresses) {
+                    $result['details'][] = "Could not resolve {$mx['target']}";
+                    $all_valid = false;
+                    continue;
+                }
+                
+                foreach ($ip_addresses as $ip) {
+                    $ptr = gethostbyaddr($ip);
+                    if ($ptr === $ip || $ptr === false) {
+                        $result['details'][] = "No reverse DNS record for {$mx['target']} ({$ip})";
+                        $all_valid = false;
+                    } else {
+                        $result['details'][] = "Reverse DNS for {$mx['target']}: {$ptr}";
+                    }
+                }
+            }
+            
+            $result['status'] = $all_valid;
+            if (!$all_valid) {
+                $this->addSecurityRisk("Missing reverse DNS records for mail servers", 
+                    "Some mail servers lack proper reverse DNS records, which may cause email delivery issues.");
+            }
+            return $result;
+        }
+        
+        private function checkCAA($domain) {
+            $result = ['status' => false, 'details' => []];
+            
+            // Check CAA records
+            $caa_records = dns_get_record($domain, DNS_CAA);
+            
+            if (empty($caa_records)) {
+                $result['details'][] = "No CAA records found";
+                $this->addSecurityRisk("Missing CAA records", 
+                    "No CAA (Certificate Authority Authorization) records found. CAA records help prevent unauthorized SSL/TLS certificate issuance.");
+                return $result;
+            }
+            
+            foreach ($caa_records as $caa) {
+                if (isset($caa['tag']) && isset($caa['value'])) {
+                    $result['details'][] = "CAA record: {$caa['tag']} => {$caa['value']}";
+                }
+            }
+            
+            $result['status'] = true;
+            return $result;
         }
     }
     ?>
