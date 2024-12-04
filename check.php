@@ -533,7 +533,7 @@ require_once __DIR__ . '/src/Logger.php';
         }
 
         private function checkReverseDNS($domain) {
-            $result = ['status' => false, 'details' => []];
+            $result = ['status' => 'bad', 'details' => []];
             
             // Get MX records
             $mx_records = dns_get_record($domain, DNS_MX);
@@ -562,8 +562,9 @@ require_once __DIR__ . '/src/Logger.php';
                 }
             }
             
-            $result['status'] = $all_valid;
-            if (!$all_valid) {
+            if ($all_valid) {
+                $result['status'] = 'good';
+            } else {
                 $this->addSecurityRisk("Missing reverse DNS records for mail servers", 
                     "Some mail servers lack proper reverse DNS records, which may cause email delivery issues.");
             }
@@ -571,7 +572,7 @@ require_once __DIR__ . '/src/Logger.php';
         }
         
         private function checkCAA($domain) {
-            $result = ['status' => false, 'details' => []];
+            $result = ['status' => 'bad', 'details' => []];
             
             // Check CAA records
             $caa_records = dns_get_record($domain, DNS_CAA);
@@ -589,7 +590,7 @@ require_once __DIR__ . '/src/Logger.php';
                 }
             }
             
-            $result['status'] = true;
+            $result['status'] = 'good';
             return $result;
         }
     }
