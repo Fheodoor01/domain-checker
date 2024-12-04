@@ -152,7 +152,7 @@
             .loading-animation {
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.5);
+                background: rgba(255, 255, 255, 0.8);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -161,8 +161,8 @@
 
             .shield-spinner {
                 position: relative;
-                width: 140px;
-                height: 140px;
+                width: 168px;
+                height: 168px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -180,34 +180,24 @@
 
             .spinner-ring {
                 position: absolute;
+                top: 0;
+                left: 0;
                 width: 100%;
                 height: 100%;
-                border: 3px solid transparent;
-                border-top-color: #4F46E5;
-                border-right-color: #4F46E5;
+                border: 8px solid rgba(0, 0, 0, 0.1);
+                border-top-color: #3498db;
                 border-radius: 50%;
-                animation: spin 1.5s linear infinite;
+                animation: spin 1s linear infinite;
             }
 
             @keyframes spin {
-                from {
-                    transform: rotate(0deg);
-                }
-                to {
-                    transform: rotate(360deg);
-                }
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
             }
 
             @keyframes breathe {
-                0% {
-                    transform: scale(1);
-                }
-                50% {
-                    transform: scale(1.1);
-                }
-                100% {
-                    transform: scale(1);
-                }
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
             }
 
             .input-container {
@@ -281,7 +271,7 @@
                             <div class="spinner-ring"></div>
                             <img src="images/shield.png" alt="Loading" class="shield-image">
                         </div>
-                        <p class="mt-4 text-lg font-semibold text-center"><?php echo $lang['checking'] ?? 'Checking domain...'; ?></p>
+                        <p class="mt-4 text-lg font-semibold text-center" id="loading-text">Checking domain...</p>
                     </div>
                 </div>
 
@@ -558,4 +548,34 @@
             </div>
         </div>
     </body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const testNames = [
+                'Checking nameservers...',
+                'Checking SMTP...',
+                'Checking DNSSEC...',
+                'Checking SPF...',
+                'Checking DMARC...',
+                'Checking DANE...',
+                'Checking TLS...',
+                'Checking TLS Report...',
+                'Checking MTA-STS...',
+                'Checking BIMI...',
+                'Checking HTTPS...',
+                'Checking Reverse DNS...',
+                'Checking CAA...',
+                'Checking DDoS Protection...'
+            ];
+
+            let currentIndex = 0;
+            const loadingText = document.querySelector('.loading-animation p');
+
+            function updateLoadingText() {
+                loadingText.textContent = testNames[currentIndex];
+                currentIndex = (currentIndex + 1) % testNames.length;
+            }
+
+            setInterval(updateLoadingText, 400);
+        });
+    </script>
     </html>
