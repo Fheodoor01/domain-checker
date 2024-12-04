@@ -50,16 +50,19 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls_report' => $this->checkTlsReport($domain),
                 'mta_sts' => $this->checkMtaSts($domain),
                 'bimi' => $this->checkBimi($domain),
-                'https' => $security->checkHttps($domain),  // Add HTTPS check
+                'https' => $security->checkHttps($domain),
                 'reverse_dns' => $this->checkReverseDNS($domain),
                 'caa' => $this->checkCAA($domain),
                 'ddos_protection' => $this->checkDdosProtection($domain)
             ];
 
-            // Ensure all results have a status
+            // Ensure all results have a status and details
             foreach ($results as $key => &$result) {
                 if (!isset($result['status'])) {
                     $result['status'] = 'bad';
+                }
+                if (!isset($result['details'])) {
+                    $result['details'] = [];
                 }
             }
 
@@ -70,7 +73,8 @@ require_once __DIR__ . '/src/Logger.php';
             $results['overall_score'] = $score;
             $results['detected_services'] = $services;
             $results['security_risks'] = $this->security_risks;
-            $results['debug'] = $this->debug;
+            // Uncomment the next line to show debug info, comment out to hide
+            // $results['debug'] = $this->debug;
 
             // Log the check with results
             $this->logger->logCheck($domain, $results);

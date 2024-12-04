@@ -27,7 +27,10 @@
                 'tls_report' => 'TLS Report',
                 'mta_sts' => 'MTA-STS',
                 'bimi' => 'BIMI',
-                'https' => 'HTTPS Security'
+                'https' => 'HTTPS Security',
+                'reverse_dns' => 'Reverse DNS',
+                'ddos_protection' => 'DDoS Protection',
+                'caa' => 'CAA'
             ],
             'explanations' => [
                 'nameservers' => 'Name servers are responsible for hosting your domain\'s DNS records. Multiple name servers provide redundancy.',
@@ -40,7 +43,10 @@
                 'tls_report' => 'TLS reporting provides feedback about TLS connection successes and failures.',
                 'mta_sts' => 'MTA-STS is a mechanism enabling mail service providers to declare their ability to receive TLS-secured connections.',
                 'bimi' => 'Brand Indicators for Message Identification (BIMI) allows you to display your logo next to authenticated emails.',
-                'https' => 'HTTPS security ensures that data transmitted between your website and users is encrypted.'
+                'https' => 'HTTPS security ensures that data transmitted between your website and users is encrypted.',
+                'reverse_dns' => 'Reverse DNS associates an IP address with a domain name, helping to prevent spam and phishing.',
+                'ddos_protection' => 'DDoS protection helps prevent distributed denial-of-service attacks from overwhelming your website or network.',
+                'caa' => 'CAA (Certificate Authority Authorization) specifies which certificate authorities are allowed to issue certificates for your domain.'
             ],
             'strength' => 'Strength',
             'messages' => [
@@ -55,7 +61,10 @@
                 'configure_tls' => 'Configure TLS for email transmission',
                 'implement_mta_sts' => 'Implement MTA-STS for improved mail security',
                 'implement_bimi' => 'Consider implementing BIMI to display your logo in emails',
-                'configure_https' => 'Configure HTTPS to secure your website\'s data transmission'
+                'configure_https' => 'Configure HTTPS to secure your website\'s data transmission',
+                'configure_reverse_dns' => 'Configure reverse DNS to prevent spam and phishing',
+                'enable_ddos_protection' => 'Enable DDoS protection to prevent distributed denial-of-service attacks',
+                'configure_caa' => 'Configure CAA to specify allowed certificate authorities'
             ],
             'risks' => [
                 'spf' => 'Emails could be spoofed from your domain',
@@ -67,10 +76,16 @@
                 'https' => [
                     'bad' => 'HTTPS is not properly configured. This makes your website vulnerable to man-in-the-middle attacks.',
                     'warning' => 'Your website allows insecure HTTP access without redirecting to HTTPS. This could expose user data to interception.'
-                ]
+                ],
+                'reverse_dns' => 'Reverse DNS is not configured, which could lead to spam and phishing issues',
+                'ddos_protection' => 'DDoS protection is not enabled, leaving your website vulnerable to attacks',
+                'caa' => 'CAA is not configured, which could lead to unauthorized certificate issuance'
             ],
             'warnings' => [
-                'https' => 'Website accessible over insecure HTTP without HTTPS redirect'
+                'https' => 'Website accessible over insecure HTTP without HTTPS redirect',
+                'reverse_dns' => 'Reverse DNS is not configured',
+                'ddos_protection' => 'DDoS protection is not enabled',
+                'caa' => 'CAA is not configured'
             ]
         ],
         'nl' => [
@@ -100,7 +115,10 @@
                 'tls_report' => 'TLS Rapportage',
                 'mta_sts' => 'MTA-STS',
                 'bimi' => 'BIMI',
-                'https' => 'HTTPS Security'
+                'https' => 'HTTPS Security',
+                'reverse_dns' => 'Reverse DNS',
+                'ddos_protection' => 'DDoS Protection',
+                'caa' => 'CAA'
             ],
             'explanations' => [
                 'nameservers' => 'Nameservers zijn verantwoordelijk voor het hosten van de DNS-records van uw domein. Meerdere nameservers zorgen voor redundantie.',
@@ -113,7 +131,10 @@
                 'tls_report' => 'TLS-rapportage geeft feedback over successen en mislukkingen van TLS-verbindingen.',
                 'mta_sts' => 'MTA-STS is een mechanisme waarmee e-mailproviders hun mogelijkheid om TLS-beveiligde verbindingen te ontvangen kunnen declareren.',
                 'bimi' => 'Brand Indicators for Message Identification (BIMI) maakt het mogelijk om uw logo naast geverifieerde e-mails weer te geven.',
-                'https' => 'HTTPS security zorgt ervoor dat gegevensoverdracht tussen uw website en gebruikers wordt versleuteld.'
+                'https' => 'HTTPS security zorgt ervoor dat gegevensoverdracht tussen uw website en gebruikers wordt versleuteld.',
+                'reverse_dns' => 'Reverse DNS associeert een IP-adres met een domeinnaam, waardoor spam en phishing worden voorkomen.',
+                'ddos_protection' => 'DDoS protection helpt om distributed denial-of-service aanvallen te voorkomen die uw website of netwerk kunnen overweldigen.',
+                'caa' => 'CAA (Certificate Authority Authorization) specificeert welke certificaatautoriteiten gemachtigd zijn om certificaten uit te geven voor uw domein.'
             ],
             'strength' => 'Sterkte',
             'messages' => [
@@ -128,7 +149,10 @@
                 'configure_tls' => 'Configureer TLS voor e-mailverzending',
                 'implement_mta_sts' => 'Implementeer MTA-STS voor verbeterde mailbeveiliging',
                 'implement_bimi' => 'Overweeg BIMI te implementeren om uw logo in e-mails weer te geven',
-                'configure_https' => 'Configureer HTTPS om uw website\'s gegevensoverdracht te beveiligen'
+                'configure_https' => 'Configureer HTTPS om uw website\'s gegevensoverdracht te beveiligen',
+                'configure_reverse_dns' => 'Configureer reverse DNS om spam en phishing te voorkomen',
+                'enable_ddos_protection' => 'Schakel DDoS protection in om distributed denial-of-service aanvallen te voorkomen',
+                'configure_caa' => 'Configureer CAA om gemachtigde certificaatautoriteiten te specificeren'
             ],
             'risks' => [
                 'spf' => 'E-mails kunnen worden vervalst vanaf uw domein',
@@ -140,10 +164,16 @@
                 'https' => [
                     'bad' => 'HTTPS is niet correct geconfigureerd. Dit maakt uw website kwetsbaar voor man-in-the-middle aanvallen.',
                     'warning' => 'Uw website is toegankelijk via onveilig HTTP zonder doorverwijzing naar HTTPS. Dit kan gebruikersgegevens blootstellen aan interceptie.'
-                ]
+                ],
+                'reverse_dns' => 'Reverse DNS is niet geconfigureerd, wat kan leiden tot spam en phishing problemen',
+                'ddos_protection' => 'DDoS protection is niet ingeschakeld, waardoor uw website kwetsbaar is voor aanvallen',
+                'caa' => 'CAA is niet geconfigureerd, wat kan leiden tot ongeautoriseerde certificaatuitgifte'
             ],
             'warnings' => [
-                'https' => 'Website toegankelijk via onveilig HTTP zonder HTTPS-doorverwijzing'
+                'https' => 'Website toegankelijk via onveilig HTTP zonder HTTPS-doorverwijzing',
+                'reverse_dns' => 'Reverse DNS is niet geconfigureerd',
+                'ddos_protection' => 'DDoS protection is niet ingeschakeld',
+                'caa' => 'CAA is niet geconfigureerd'
             ]
         ]
     ];
