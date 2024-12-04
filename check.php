@@ -48,7 +48,8 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls_report' => $this->checkTlsReport($domain),
                 'mta_sts' => $this->checkMtaSts($domain),
                 'bimi' => $this->checkBimi($domain),
-                'https' => $security->checkHttps($domain)  // Add HTTPS check
+                'https' => $security->checkHttps($domain),  // Add HTTPS check
+                'reverse_dns' => $security->checkReverseDNS($domain) // Add reverse DNS check
             ];
 
             // Detect services from SPF and DMARC records
@@ -84,7 +85,8 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls_report' => 0.25,
                 'mta_sts' => 0.25,
                 'bimi' => 0.25,
-                'https' => 0.5  // Add HTTPS weight
+                'https' => 0.5,  // Add HTTPS weight
+                'reverse_dns' => 0.5 // Add reverse DNS weight
             ];
 
             $score = 0;

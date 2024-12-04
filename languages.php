@@ -55,7 +55,16 @@
                 'configure_tls' => 'Configure TLS for email transmission',
                 'implement_mta_sts' => 'Implement MTA-STS for improved mail security',
                 'implement_bimi' => 'Consider implementing BIMI to display your logo in emails',
-                'configure_https' => 'Configure HTTPS to secure your website\'s data transmission'
+                'configure_https' => 'Configure HTTPS to secure your website\'s data transmission',
+                'spf_check' => 'SPF Check',
+                'dmarc_check' => 'DMARC Check',
+                'dkim_check' => 'DKIM Check',
+                'reverse_dns_check' => 'Reverse DNS Check',
+                'no_mx_records' => 'No MX records found',
+                'missing_reverse_dns' => 'Missing reverse DNS for mail server %s (%s)',
+                'reverse_dns_mismatch' => 'Forward-confirmed reverse DNS mismatch for %s (%s -> %s)',
+                'valid_reverse_dns' => 'Valid reverse DNS for %s (%s -> %s)',
+                'ip_resolve_error' => 'Could not resolve IP for mail server %s'
             ],
             'risks' => [
                 'spf' => 'Emails could be spoofed from your domain',
@@ -128,7 +137,16 @@
                 'configure_tls' => 'Configureer TLS voor e-mailverzending',
                 'implement_mta_sts' => 'Implementeer MTA-STS voor verbeterde mailbeveiliging',
                 'implement_bimi' => 'Overweeg BIMI te implementeren om uw logo in e-mails weer te geven',
-                'configure_https' => 'Configureer HTTPS om uw website\'s gegevensoverdracht te beveiligen'
+                'configure_https' => 'Configureer HTTPS om uw website\'s gegevensoverdracht te beveiligen',
+                'spf_check' => 'SPF Controle',
+                'dmarc_check' => 'DMARC Controle',
+                'dkim_check' => 'DKIM Controle',
+                'reverse_dns_check' => 'Reverse DNS Controle',
+                'no_mx_records' => 'Geen MX records gevonden',
+                'missing_reverse_dns' => 'Ontbrekende reverse DNS voor mailserver %s (%s)',
+                'reverse_dns_mismatch' => 'Forward-confirmed reverse DNS mismatch voor %s (%s -> %s)',
+                'valid_reverse_dns' => 'Geldige reverse DNS voor %s (%s -> %s)',
+                'ip_resolve_error' => 'Kan IP niet oplossen voor mailserver %s'
             ],
             'risks' => [
                 'spf' => 'E-mails kunnen worden vervalst vanaf uw domein',

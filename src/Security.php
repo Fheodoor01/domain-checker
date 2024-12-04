@@ -227,4 +227,81 @@ class Security {
         fclose($handle);
         return $result;
     }
+
+    /**
+     * Check reverse DNS for mail servers
+     * @param string $domain
+     * @return array
+     */
+    public function checkReverseDNS($domain) {
+        $result = [
+            'status' => true,
+            'details' => [],
+            'score' => 1
+        ];
+
+        try {
+            // Get MX records
+            $mxhosts = [];
+            if (getmxrr($domain, $mxhosts)) {
+                foreach ($mxhosts as $mx) {
+                    // Get IP addresses for MX host
+                    $ips = gethostbynamel($mx);
+                    if ($ips) {
+                        foreach ($ips as $ip) {
+                            // Perform reverse DNS lookup
+                            $hostname = gethostbyaddr($ip);
+                            if ($hostname === $ip) {
+                                $result['status'] = false;
+                                $result['score'] = 0;
+                                $result['details'][] = [
+                                    'type' => 'error',
+                                    'message' => "Missing reverse DNS for mail server {$mx} ({$ip})"
+                                ];
+                            } else {
+                                // Verify forward-confirmed reverse DNS
+                                $forward_ips = gethostbynamel($hostname);
+                                if (!$forward_ips || !in_array($ip, $forward_ips)) {
+                                    $result['status'] = false;
+                                    $result['score'] = 0.5;
+                                    $result['details'][] = [
+                                        'type' => 'warning',
+                                        'message' => "Forward-confirmed reverse DNS mismatch for {$mx} ({$ip} -> {$hostname})"
+                                    ];
+                                } else {
+                                    $result['details'][] = [
+                                        'type' => 'success',
+                                        'message' => "Valid reverse DNS for {$mx} ({$ip} -> {$hostname})"
+                                    ];
+                                }
+                            }
+                        }
+                    } else {
+                        $result['status'] = false;
+                        $result['score'] = 0;
+                        $result['details'][] = [
+                            'type' => 'error',
+                            'message' => "Could not resolve IP for mail server {$mx}"
+                        ];
+                    }
+                }
+            } else {
+                $result['status'] = false;
+                $result['score'] = 0;
+                $result['details'][] = [
+                    'type' => 'error',
+                    'message' => 'No MX records found'
+                ];
+            }
+        } catch (Exception $e) {
+            $result['status'] = false;
+            $result['score'] = 0;
+            $result['details'][] = [
+                'type' => 'error',
+                'message' => 'Error checking reverse DNS: ' . $e->getMessage()
+            ];
+        }
+
+        return $result;
+    }
 }
