@@ -52,8 +52,16 @@ require_once __DIR__ . '/src/Logger.php';
                 'bimi' => $this->checkBimi($domain),
                 'https' => $security->checkHttps($domain),  // Add HTTPS check
                 'reverse_dns' => $this->checkReverseDNS($domain),
-                'caa' => $this->checkCAA($domain)
+                'caa' => $this->checkCAA($domain),
+                'ddos_protection' => $this->checkDdosProtection($domain)
             ];
+
+            // Ensure all results have a status
+            foreach ($results as $key => &$result) {
+                if (!isset($result['status'])) {
+                    $result['status'] = 'bad';
+                }
+            }
 
             // Detect services from SPF and DMARC records
             $services = $this->detectServices($results['spf'], $results['dmarc']);
@@ -93,7 +101,8 @@ require_once __DIR__ . '/src/Logger.php';
                 'bimi' => 0.25,
                 'https' => 0.5,
                 'reverse_dns' => 0.25,
-                'caa' => 0.25
+                'caa' => 0.25,
+                'ddos_protection' => 0.5
             ];
 
             $score = 0;
@@ -533,7 +542,7 @@ require_once __DIR__ . '/src/Logger.php';
         }
 
         private function checkReverseDNS($domain) {
-            $result = ['status' => 'bad', 'details' => []];
+            $result = ['status' => 'bad', 'details' => [], 'section_title' => 'Reverse DNS Check'];
             
             // Get MX records
             $mx_records = dns_get_record($domain, DNS_MX);
@@ -591,6 +600,84 @@ require_once __DIR__ . '/src/Logger.php';
             }
             
             $result['status'] = 'good';
+            return $result;
+        }
+
+        private function checkDdosProtection($domain) {
+            $result = ['status' => 'bad', 'details' => []];
+            
+            // Check for common DDoS protection services
+            $protection_found = false;
+            
+            // Check DNS records for DDoS protection services
+            $ns_records = dns_get_record($domain, DNS_NS);
+            $cname_records = dns_get_record($domain, DNS_CNAME);
+            $txt_records = dns_get_record($domain, DNS_TXT);
+            
+            // Common DDoS protection providers
+            $protection_signatures = [
+                'cloudflare' => ['cloudflare.com', 'cloudflare.net'],
+                'akamai' => ['akamai.net', 'akamaiedge.net'],
+                'cloudfront' => ['cloudfront.net'],
+                'fastly' => ['fastly.net'],
+                'imperva' => ['incapsula.com'],
+                'sucuri' => ['sucuri.net'],
+                'aws shield' => ['aws.amazon.com'],
+                'azure' => ['azure.com', 'azurewebsites.net']
+            ];
+            
+            foreach ($protection_signatures as $provider => $signatures) {
+                foreach ($signatures as $signature) {
+                    foreach ($ns_records as $record) {
+                        if (stripos($record['target'], $signature) !== false) {
+                            $result['details'][] = "DDoS protection detected: {$provider} (via NS records)";
+                            $protection_found = true;
+                        }
+                    }
+                    
+                    foreach ($cname_records as $record) {
+                        if (isset($record['target']) && stripos($record['target'], $signature) !== false) {
+                            $result['details'][] = "DDoS protection detected: {$provider} (via CNAME records)";
+                            $protection_found = true;
+                        }
+                    }
+                }
+            }
+            
+            // Check for specific headers using cURL
+            $ch = curl_init("https://{$domain}");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_NOBODY, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $response = curl_exec($ch);
+            $headers = curl_getinfo($ch);
+            curl_close($ch);
+            
+            $protection_headers = [
+                'cf-ray' => 'Cloudflare',
+                'x-sucuri-id' => 'Sucuri',
+                'x-cdn' => 'Generic CDN',
+                'x-cache' => 'Generic CDN',
+                'x-azure-ref' => 'Azure',
+                'x-amz-cf-id' => 'AWS CloudFront'
+            ];
+            
+            foreach ($protection_headers as $header => $provider) {
+                if (stripos($response, $header) !== false) {
+                    $result['details'][] = "DDoS protection detected: {$provider} (via HTTP headers)";
+                    $protection_found = true;
+                }
+            }
+            
+            if ($protection_found) {
+                $result['status'] = 'good';
+            } else {
+                $result['details'][] = "No DDoS protection detected";
+                $this->addSecurityRisk("No DDoS Protection Detected", 
+                    "Your domain appears to lack DDoS protection. Consider using a DDoS protection service to prevent denial-of-service attacks.");
+            }
+            
             return $result;
         }
     }
