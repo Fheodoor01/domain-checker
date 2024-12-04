@@ -56,21 +56,20 @@ require_once __DIR__ . '/src/Logger.php';
             ];
 
             // Detect services from SPF and DMARC records
-            $results['detected_services'] = $this->detectServices($results['spf'], $results['dmarc']);
+            $services = $this->detectServices($results['spf'], $results['dmarc']);
 
             $score = $this->calculateScore($results);
+            $score = round($score / array_sum($this->calculateScore($results)) * 100);
+            
             $results['overall_score'] = $score;
+            $results['detected_services'] = $services;
+            $results['security_risks'] = $this->security_risks;
+            $results['debug'] = $this->debug;
 
             // Log the check with results
             $this->logger->logCheck($domain, $results);
 
-            return [
-                'score' => round($score / 5 * 100),
-                'results' => $results,
-                'services' => $results['detected_services'],
-                'security_risks' => $this->security_risks,
-                'debug' => $this->debug
-            ];
+            return $results;
         }
 
         private function addDebug($check, $message, $data = null) {
@@ -87,31 +86,31 @@ require_once __DIR__ . '/src/Logger.php';
                 'nameservers' => 0.5,
                 'smtp' => 0.5,
                 'dnssec' => 0.5,
-                'spf' => 0.75,
-                'dmarc' => 0.75,
+                'spf' => 0.5,
+                'dmarc' => 0.5,
                 'dane' => 0.25,
                 'tls' => 0.5,
                 'tls_report' => 0.25,
                 'mta_sts' => 0.25,
                 'bimi' => 0.25,
-                'https' => 0.5,  // Add HTTPS weight
+                'https' => 0.5,
                 'reverse_dns' => 0.25,
                 'caa' => 0.25
             ];
 
             $score = 0;
-            $totalWeight = 0;
+            $total_weight = array_sum($weights);
 
             foreach ($weights as $check => $weight) {
-                if (isset($results[$check]['status'])) {
-                    $totalWeight += $weight;
-                    if ($results[$check]['status'] === 'good') {
+                if (isset($results[$check]) && isset($results[$check]['status'])) {
+                    if ($results[$check]['status'] === true || $results[$check]['status'] === 'good') {
                         $score += $weight;
                     }
                 }
             }
 
-            return number_format(($score / $totalWeight) * 5, 2);
+            $score = round($score / $total_weight * 5);
+            return $score;
         }
 
         private function checkNameservers($domain) {
