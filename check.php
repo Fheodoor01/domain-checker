@@ -48,9 +48,15 @@ require_once __DIR__ . '/src/Logger.php';
                 'tls_report' => $this->checkTlsReport($domain),
                 'mta_sts' => $this->checkMtaSts($domain),
                 'bimi' => $this->checkBimi($domain),
-                'https' => $security->checkHttps($domain),  // Add HTTPS check
-                'reverse_dns' => $security->checkReverseDNS($domain) // Add reverse DNS check
+                'https' => $security->checkHttps($domain),
+                'reverse_dns' => $security->checkReverseDNS($domain)
             ];
+
+            // Initialize arrays for categorized results
+            $results['risks'] = [];
+            $results['improvements'] = [];
+            $results['strengths'] = [];
+            $results['warnings'] = [];
 
             // Detect services from SPF and DMARC records
             $results['detected_services'] = $this->detectServices($results['spf'], $results['dmarc']);
@@ -145,29 +151,36 @@ require_once __DIR__ . '/src/Logger.php';
         }
 
         private function checkNameservers($domain) {
-            try {
-                $this->addDebug('Nameservers', 'Checking nameservers for: ' . $domain);
-                $records = dns_get_record($domain, DNS_NS);
-                $this->addDebug('Nameservers', 'Found records', $records);
+            $result = [
+                'status' => false,
+                'details' => [],
+                'score' => 0
+            ];
 
-                if (count($records) >= 2) {
-                    return [
-                        'status' => 'good',
-                        'message' => 'Found ' . count($records) . ' name servers',
-                        'records' => array_map(function($r) { return $r['target']; }, $records)
-                    ];
-                } else if (count($records) === 1) {
-                    return [
-                        'status' => 'warning',
-                        'message' => 'Only one name server found. Multiple name servers are recommended.',
-                        'records' => array_map(function($r) { return $r['target']; }, $records)
-                    ];
+            try {
+                $output = Security::safeExecute('dig', ['+short', 'NS', $domain])['output'];
+                $nameservers = array_filter(explode("\n", $output));
+
+                if (!empty($nameservers)) {
+                    $result['status'] = true;
+                    $result['score'] = 1;
+                    $result['details'] = $nameservers;
+                    
+                    // Add to strengths if we have multiple nameservers
+                    if (count($nameservers) > 1) {
+                        if (!isset($this->results['strengths'])) {
+                            $this->results['strengths'] = [];
+                        }
+                        $this->results['strengths'][] = 'Multiple nameservers provide redundancy';
+                    }
+                } else {
+                    $result['details'][] = 'No nameservers found';
                 }
-                return ['status' => 'bad', 'message' => 'No name servers found'];
             } catch (Exception $e) {
-                $this->addDebug('Nameservers', 'Error: ' . $e->getMessage());
-                return ['status' => 'error', 'message' => 'Check failed: ' . $e->getMessage()];
+                $result['details'][] = 'Error checking nameservers: ' . $e->getMessage();
             }
+
+            return $result;
         }
 
         private function checkSmtp($domain) {

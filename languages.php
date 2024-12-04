@@ -64,31 +64,43 @@
                 'missing_reverse_dns' => 'Missing reverse DNS for mail server %s (%s)',
                 'reverse_dns_mismatch' => 'Forward-confirmed reverse DNS mismatch for %s (%s -> %s)',
                 'valid_reverse_dns' => 'Valid reverse DNS for %s (%s -> %s)',
-                'ip_resolve_error' => 'Could not resolve IP for mail server %s'
+                'ip_resolve_error' => 'Could not resolve IP for mail server %s',
+                'no_nameservers' => 'No nameservers found for your domain',
+                'single_nameserver' => 'Only one nameserver found'
             ],
             'risks' => [
                 'spf' => 'Emails could be spoofed from your domain',
                 'dmarc' => 'Your domain is vulnerable to email spoofing',
                 'dkim' => 'Emails may be marked as spam',
                 'https' => 'Your website is not secure',
-                'reverse_dns' => 'Mail servers may reject your emails'
+                'reverse_dns' => 'Mail servers may reject your emails',
+                'no_nameservers' => 'No nameservers found for your domain'
             ],
             'improvements' => [
                 'configure_spf' => 'Configure SPF to prevent email spoofing',
                 'configure_dmarc' => 'Configure DMARC for better email security',
                 'configure_dkim' => 'Configure DKIM to improve email deliverability',
                 'configure_https' => 'Configure HTTPS to secure your website\'s data transmission',
-                'configure_reverse_dns' => 'Configure reverse DNS for your mail servers'
+                'configure_reverse_dns' => 'Configure reverse DNS for your mail servers',
+                'configure_nameservers' => 'Configure nameservers for your domain',
+                'add_nameserver' => 'Add additional nameserver for redundancy'
             ],
             'strengths' => [
                 'spf_configured' => 'SPF is properly configured',
                 'dmarc_configured' => 'DMARC is properly configured',
                 'dkim_configured' => 'DKIM is properly configured',
                 'https_configured' => 'HTTPS is properly configured',
-                'reverse_dns_configured' => 'Reverse DNS is properly configured'
+                'reverse_dns_configured' => 'Reverse DNS is properly configured',
+                'nameservers_redundant' => 'Multiple nameservers provide redundancy'
             ],
             'warnings' => [
-                'https' => 'Website accessible over insecure HTTP without HTTPS redirect'
+                'https' => 'Website accessible over insecure HTTP without HTTPS redirect',
+                'single_nameserver' => 'Only one nameserver found'
+            ],
+            'nameserver_messages' => [
+                'no_nameservers' => 'No nameservers found for your domain',
+                'single_nameserver' => 'Only one nameserver found',
+                'nameservers_redundant' => 'Multiple nameservers provide redundancy'
             ]
         ],
         'nl' => [
@@ -155,31 +167,43 @@
                 'missing_reverse_dns' => 'Ontbrekende reverse DNS voor mailserver %s (%s)',
                 'reverse_dns_mismatch' => 'Forward-confirmed reverse DNS mismatch voor %s (%s -> %s)',
                 'valid_reverse_dns' => 'Geldige reverse DNS voor %s (%s -> %s)',
-                'ip_resolve_error' => 'Kan IP niet oplossen voor mailserver %s'
+                'ip_resolve_error' => 'Kan IP niet oplossen voor mailserver %s',
+                'no_nameservers' => 'Geen nameservers gevonden voor uw domein',
+                'single_nameserver' => 'Slechts één nameserver gevonden'
             ],
             'risks' => [
                 'spf' => 'E-mails kunnen worden vervalst vanaf uw domein',
                 'dmarc' => 'Uw domein is kwetsbaar voor e-mail vervalsing',
                 'dkim' => 'E-mails kunnen als spam worden gemarkeerd',
                 'https' => 'Uw website is niet veilig',
-                'reverse_dns' => 'Mailservers kunnen uw e-mails weigeren'
+                'reverse_dns' => 'Mailservers kunnen uw e-mails weigeren',
+                'no_nameservers' => 'Geen nameservers gevonden voor uw domein'
             ],
             'improvements' => [
                 'configure_spf' => 'Configureer SPF om e-mail vervalsing te voorkomen',
                 'configure_dmarc' => 'Configureer DMARC voor betere e-mailbeveiliging',
                 'configure_dkim' => 'Configureer DKIM om e-mail bezorging te verbeteren',
                 'configure_https' => 'Configureer HTTPS om uw website\'s gegevensoverdracht te beveiligen',
-                'configure_reverse_dns' => 'Configureer reverse DNS voor uw mailservers'
+                'configure_reverse_dns' => 'Configureer reverse DNS voor uw mailservers',
+                'configure_nameservers' => 'Configureer nameservers voor uw domein',
+                'add_nameserver' => 'Voeg extra nameserver toe voor redundantie'
             ],
             'strengths' => [
                 'spf_configured' => 'SPF is correct geconfigureerd',
                 'dmarc_configured' => 'DMARC is correct geconfigureerd',
                 'dkim_configured' => 'DKIM is correct geconfigureerd',
                 'https_configured' => 'HTTPS is correct geconfigureerd',
-                'reverse_dns_configured' => 'Reverse DNS is correct geconfigureerd'
+                'reverse_dns_configured' => 'Reverse DNS is correct geconfigureerd',
+                'nameservers_redundant' => 'Meerdere nameservers zorgen voor redundantie'
             ],
             'warnings' => [
-                'https' => 'Website toegankelijk via onveilig HTTP zonder HTTPS-doorverwijzing'
+                'https' => 'Website toegankelijk via onveilig HTTP zonder HTTPS-doorverwijzing',
+                'single_nameserver' => 'Slechts één nameserver gevonden'
+            ],
+            'nameserver_messages' => [
+                'no_nameservers' => 'Geen nameservers gevonden voor uw domein',
+                'single_nameserver' => 'Slechts één nameserver gevonden',
+                'nameservers_redundant' => 'Meerdere nameservers zorgen voor redundantie'
             ]
         ]
     ];

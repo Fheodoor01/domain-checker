@@ -71,43 +71,77 @@
     }
 
     function generateSummary($results, $lang) {
-        $strengths = [];
-        $services = [];
-
-        foreach ($results as $key => $result) {
-            if ($key === 'overall_score' || $key === 'debug' || $key === 'detected_services') continue;
-
-            switch ($result['status']) {
-                case 'good':
-                    $message = isset($lang['messages'][$key . '_configured']) ? 
-                              $lang['messages'][$key . '_configured'] : 
-                              ucfirst($key) . ' ' . $lang['status']['passed'];
-                    if (isset($result['strength'])) {
-                        $message .= " ({$result['strength']})";
-                    }
-                    $strengths[] = $message;
-                    break;
-            }
-        }
-
-        // Process detected services
-        if (isset($results['detected_services']) && !empty($results['detected_services'])) {
-            foreach ($results['detected_services'] as $service) {
-                $serviceInfo = $service['name'];
-                if (isset($service['description'])) {
-                    $serviceInfo .= " - {$service['description']}";
-                }
-                if (isset($service['type'])) {
-                    $serviceInfo .= " ({$service['type']})";
-                }
-                $services[] = $serviceInfo;
-            }
-        }
-
-        return [
-            'strengths' => $strengths,
-            'services' => $services
+        $summary = [
+            'risks' => [],
+            'improvements' => [],
+            'strengths' => [],
+            'warnings' => []
         ];
+
+        // Add any pre-processed results
+        if (isset($results['risks'])) {
+            $summary['risks'] = array_merge($summary['risks'], $results['risks']);
+        }
+        if (isset($results['improvements'])) {
+            $summary['improvements'] = array_merge($summary['improvements'], $results['improvements']);
+        }
+        if (isset($results['strengths'])) {
+            $summary['strengths'] = array_merge($summary['strengths'], $results['strengths']);
+        }
+        if (isset($results['warnings'])) {
+            $summary['warnings'] = array_merge($summary['warnings'], $results['warnings']);
+        }
+
+        // Process nameservers
+        if (isset($results['nameservers']) && is_array($results['nameservers'])) {
+            if ($results['nameservers']['status']) {
+                $nsCount = count($results['nameservers']['details']);
+                if ($nsCount > 1) {
+                    $summary['strengths'][] = $lang['strengths']['nameservers_redundant'] ?? 'Multiple nameservers provide redundancy';
+                } elseif ($nsCount === 1) {
+                    $summary['warnings'][] = $lang['warnings']['single_nameserver'] ?? 'Only one nameserver found';
+                    $summary['improvements'][] = $lang['improvements']['add_nameserver'] ?? 'Add additional nameserver for redundancy';
+                }
+            } else {
+                $summary['risks'][] = $lang['risks']['no_nameservers'] ?? 'No nameservers found';
+                $summary['improvements'][] = $lang['improvements']['configure_nameservers'] ?? 'Configure nameservers for your domain';
+            }
+        }
+
+        // Process other results
+        foreach ($results as $key => $result) {
+            if ($key === 'overall_score' || $key === 'debug' || $key === 'detected_services' || 
+                $key === 'risks' || $key === 'improvements' || $key === 'strengths' || 
+                $key === 'warnings' || $key === 'nameservers') {
+                continue;
+            }
+
+            if (isset($result['status'])) {
+                switch ($result['status']) {
+                    case true:
+                        $message = isset($lang['strengths'][$key . '_configured']) ? 
+                                  $lang['strengths'][$key . '_configured'] : 
+                                  ucfirst($key) . ' ' . ($lang['status']['passed'] ?? 'Passed');
+                        $summary['strengths'][] = $message;
+                        break;
+                    case false:
+                        if (isset($result['score']) && $result['score'] == 0) {
+                            $message = isset($lang['risks'][$key]) ? 
+                                     $lang['risks'][$key] : 
+                                     ucfirst($key) . ' ' . ($lang['status']['failed'] ?? 'Failed');
+                            $summary['risks'][] = $message;
+                            
+                            $improvement = isset($lang['improvements']['configure_' . $key]) ? 
+                                         $lang['improvements']['configure_' . $key] : 
+                                         'Configure ' . ucfirst($key);
+                            $summary['improvements'][] = $improvement;
+                        }
+                        break;
+                }
+            }
+        }
+
+        return $summary;
     }
     ?>
     <!DOCTYPE html>
@@ -452,12 +486,23 @@
                         <div class="bg-gray-50 rounded-lg p-6">
                             <h2 class="text-2xl font-bold mb-6"><?php echo ucfirst($lang['summary']); ?></h2>
                             
-                            <?php if (!empty($summary['services'])): ?>
+                            <?php if (!empty($summary['risks'])): ?>
                                 <div class="mb-6">
-                                    <h3 class="text-lg font-semibold mb-2"><?php echo $lang['detected_services'] ?? 'Detected Services'; ?></h3>
+                                    <h3 class="text-lg font-semibold mb-2"><?php echo $lang['risks_found'] ?? 'Security Risks Found'; ?></h3>
                                     <ul class="list-disc list-inside space-y-2">
-                                        <?php foreach ($summary['services'] as $service): ?>
-                                            <li class="text-blue-800"><?php echo htmlspecialchars($service); ?></li>
+                                        <?php foreach ($summary['risks'] as $risk): ?>
+                                            <li class="text-red-800"><?php echo htmlspecialchars($risk); ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($summary['improvements'])): ?>
+                                <div class="mb-6">
+                                    <h3 class="text-lg font-semibold mb-2"><?php echo $lang['improvements_needed'] ?? 'Improvements Needed'; ?></h3>
+                                    <ul class="list-disc list-inside space-y-2">
+                                        <?php foreach ($summary['improvements'] as $improvement): ?>
+                                            <li class="text-blue-800"><?php echo htmlspecialchars($improvement); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>
